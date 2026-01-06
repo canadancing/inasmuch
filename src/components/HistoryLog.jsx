@@ -1,8 +1,12 @@
 import { useState } from 'react';
 
 export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, residents, items }) {
-    const [editingLog, setEditingLog] = useState(null);
-    const [editQuantity, setEditQuantity] = useState(1);
+    const [editForm, setEditForm] = useState({
+        quantity: 1,
+        residentId: null,
+        residentName: '',
+        date: ''
+    });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
     const formatDate = (date) => {
@@ -36,11 +40,30 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
     const handleEdit = (log) => {
         setEditingLog(log.id);
-        setEditQuantity(log.quantity || 1);
+        const logDate = log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp);
+        const dateStr = logDate.toISOString().split('T')[0];
+        setEditForm({
+            quantity: log.quantity || 1,
+            residentId: log.residentId || null,
+            residentName: log.residentName || '',
+            date: dateStr
+        });
     };
 
     const handleSaveEdit = async (log) => {
-        await onUpdateLog(log.id, { quantity: editQuantity });
+        const [year, month, day] = editForm.date.split('-').map(Number);
+        const newDate = new Date(year, month - 1, day);
+
+        // Preserve original time if possible, or set to noon
+        const originalTime = log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp);
+        newDate.setHours(originalTime.getHours(), originalTime.getMinutes(), originalTime.getSeconds());
+
+        await onUpdateLog(log.id, {
+            quantity: editForm.quantity,
+            residentId: editForm.residentId,
+            residentName: editForm.residentName,
+            timestamp: newDate
+        });
         setEditingLog(null);
     };
 
@@ -102,43 +125,81 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                         </div>
                     ) : editingLog === log.id ? (
                         /* Edit Mode */
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
                                 <span className="text-lg">{getActionIcon(log.action)}</span>
-                                <span className="font-medium">{log.residentName}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActionBadge(log.action)}`}>
-                                    {log.action}
-                                </span>
+                                <span className="text-sm font-black uppercase tracking-widest text-primary-500">Edit Log</span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm text-gray-500">Quantity:</span>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setEditQuantity(Math.max(1, editQuantity - 1))}
-                                        className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
-                                    >
-                                        −
-                                    </button>
-                                    <span className="w-8 text-center font-bold">{editQuantity}</span>
-                                    <button
-                                        onClick={() => setEditQuantity(editQuantity + 1)}
-                                        className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
-                                    >
-                                        +
-                                    </button>
+
+                            {/* Resident Selection */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Who?</label>
+                                <select
+                                    className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2 text-sm border-none focus:ring-2 focus:ring-primary-500 outline-none"
+                                    value={editForm.residentId || ''}
+                                    onChange={(e) => {
+                                        const res = residents.find(r => r.id === e.target.value);
+                                        if (res) {
+                                            setEditForm({
+                                                ...editForm,
+                                                residentId: res.id,
+                                                residentName: `${res.firstName} ${res.lastName}`.trim()
+                                            });
+                                        }
+                                    }}
+                                >
+                                    {residents.map(res => (
+                                        <option key={res.id} value={res.id}>
+                                            {res.firstName} {res.lastName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Quantity */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Quantity ({log.itemName})</label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setEditForm({ ...editForm, quantity: Math.max(1, editForm.quantity - 1) })}
+                                            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="w-8 text-center font-bold text-lg">{editForm.quantity}</span>
+                                        <button
+                                            onClick={() => setEditForm({ ...editForm, quantity: editForm.quantity + 1 })}
+                                            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 </div>
-                                <span className="text-sm text-gray-500">× {log.itemName}</span>
+
+                                {/* Date */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">When?</label>
+                                    <input
+                                        type="date"
+                                        className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2 text-sm border-none focus:ring-2 focus:ring-primary-500 outline-none h-10"
+                                        value={editForm.date}
+                                        onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                        max={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
                             </div>
-                            <div className="flex gap-2">
+
+                            <div className="flex gap-2 pt-2">
                                 <button
                                     onClick={() => setEditingLog(null)}
-                                    className="flex-1 py-2 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg"
+                                    className="flex-1 py-2.5 text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl transition-all active:scale-95"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={() => handleSaveEdit(log)}
-                                    className="flex-1 py-2 text-sm bg-primary-500 text-white rounded-lg"
+                                    className="flex-1 py-2.5 text-sm font-bold bg-primary-500 text-white rounded-xl shadow-lg shadow-primary-500/20 transition-all active:scale-95"
                                 >
                                     Save
                                 </button>

@@ -338,13 +338,38 @@ export function useFirestore() {
 
     // Delete a log entry
     const deleteLog = async (id) => {
+        const logToDelete = logs.find(log => log.id === id);
+        if (!logToDelete) return;
+
         if (isDemo) {
             setLogs(prev => prev.filter(log => log.id !== id));
+            // Reverse stock change
+            if (logToDelete.itemId) {
+                setItems(prev => prev.map(item =>
+                    item.id === logToDelete.itemId
+                        ? {
+                            ...item,
+                            currentStock: logToDelete.action === 'used'
+                                ? item.currentStock + logToDelete.quantity
+                                : Math.max(0, item.currentStock - logToDelete.quantity)
+                        }
+                        : item
+                ));
+            }
             return;
         }
 
         try {
             await deleteDoc(doc(db, 'logs', id));
+            // Update live stock
+            const itemRef = doc(db, 'items', logToDelete.itemId);
+            const item = items.find(i => i.id === logToDelete.itemId);
+            if (item) {
+                const newStock = logToDelete.action === 'used'
+                    ? item.currentStock + logToDelete.quantity
+                    : Math.max(0, item.currentStock - logToDelete.quantity);
+                await updateDoc(itemRef, { currentStock: newStock });
+            }
         } catch (err) {
             console.error('Error deleting log:', err);
             throw err;
@@ -353,15 +378,62 @@ export function useFirestore() {
 
     // Update a log entry
     const updateLog = async (id, updates) => {
+        const oldLog = logs.find(log => log.id === id);
+        if (!oldLog) return;
+
         if (isDemo) {
             setLogs(prev => prev.map(log =>
                 log.id === id ? { ...log, ...updates } : log
             ));
+
+            // Sync stock if quantity or action changed
+            if (updates.quantity !== undefined || updates.action !== undefined) {
+                const newQuantity = updates.quantity !== undefined ? updates.quantity : oldLog.quantity;
+                const newAction = updates.action !== undefined ? updates.action : oldLog.action;
+
+                // First reverse the old log's impact
+                let netChange = 0;
+                if (oldLog.action === 'used') netChange += oldLog.quantity;
+                else if (oldLog.action === 'restocked') netChange -= oldLog.quantity;
+
+                // Then apply the new log's impact
+                if (newAction === 'used') netChange -= newQuantity;
+                else if (newAction === 'restocked') netChange += newQuantity;
+
+                if (netChange !== 0) {
+                    setItems(prev => prev.map(item =>
+                        item.id === oldLog.itemId
+                            ? { ...item, currentStock: Math.max(0, item.currentStock + netChange) }
+                            : item
+                    ));
+                }
+            }
             return;
         }
 
         try {
             await updateDoc(doc(db, 'logs', id), updates);
+
+            // Sync live stock if quantity or action changed
+            if (updates.quantity !== undefined || updates.action !== undefined) {
+                const item = items.find(i => i.id === oldLog.itemId);
+                if (item) {
+                    const newQuantity = updates.quantity !== undefined ? updates.quantity : oldLog.quantity;
+                    const newAction = updates.action !== undefined ? updates.action : oldLog.action;
+
+                    let netChange = 0;
+                    if (oldLog.action === 'used') netChange += oldLog.quantity;
+                    else if (oldLog.action === 'restocked') netChange -= oldLog.quantity;
+
+                    if (newAction === 'used') netChange -= newQuantity;
+                    else if (newAction === 'restocked') netChange += newQuantity;
+
+                    if (netChange !== 0) {
+                        const itemRef = doc(db, 'items', oldLog.itemId);
+                        await updateDoc(itemRef, { currentStock: Math.max(0, item.currentStock + netChange) });
+                    }
+                }
+            }
         } catch (err) {
             console.error('Error updating log:', err);
             throw err;
