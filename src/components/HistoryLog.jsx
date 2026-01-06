@@ -7,13 +7,11 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
     const formatDate = (date) => {
         if (!date) return 'Unknown';
-        return new Intl.DateTimeFormat('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }).format(date);
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
 
     const getActionBadge = (action) => {

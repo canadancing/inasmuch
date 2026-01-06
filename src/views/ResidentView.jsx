@@ -19,10 +19,16 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
 
         setIsSubmitting(true);
         try {
-            const dateObj = new Date(logDate);
-            // If it's today, keep it at real-time, otherwise set to noon for past dates
-            const isToday = logDate === new Date().toISOString().split('T')[0];
-            if (!isToday) {
+            const [year, month, day] = logDate.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+
+            // If it's today, we can use the current time for better sorting
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (logDate === todayStr) {
+                const now = new Date();
+                dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
+                // For past dates, set to noon to be safe
                 dateObj.setHours(12, 0, 0, 0);
             }
 
@@ -129,8 +135,8 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
                                     <div className="flex items-center gap-2">
                                         <p className="text-sm text-gray-500">How many?</p>
                                         <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${selectedItem.currentStock === 0
-                                                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                                            ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
                                             }`}>
                                             {selectedItem.currentStock} in stock
                                         </div>

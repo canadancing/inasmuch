@@ -567,10 +567,14 @@ export default function AdminPanel({
 
     const handleRestock = () => {
         if (restockItem && restockResident && restockQuantity > 0) {
-            const dateObj = new Date(restockDate);
-            // If it's today, keep it at real-time, otherwise set to noon for past dates
-            const isToday = restockDate === new Date().toISOString().split('T')[0];
-            if (!isToday) {
+            const [year, month, day] = restockDate.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (restockDate === todayStr) {
+                const now = new Date();
+                dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
                 dateObj.setHours(12, 0, 0, 0);
             }
 
