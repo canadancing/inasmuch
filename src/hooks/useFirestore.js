@@ -166,7 +166,7 @@ export function useFirestore() {
     }, []);
 
     // Add a log entry
-    const addLog = async (residentId, residentName, itemId, itemName, action, quantity) => {
+    const addLog = async (residentId, residentName, itemId, itemName, action, quantity, customDate = null) => {
         if (isDemo) {
             const newLog = {
                 id: Date.now().toString(),
@@ -176,7 +176,7 @@ export function useFirestore() {
                 itemName,
                 action,
                 quantity,
-                timestamp: new Date()
+                timestamp: customDate || new Date()
             };
             setLogs(prev => [newLog, ...prev]);
 
@@ -205,7 +205,7 @@ export function useFirestore() {
                 itemName,
                 action,
                 quantity,
-                timestamp: serverTimestamp()
+                timestamp: customDate || serverTimestamp()
             });
 
             // Update item stock
@@ -369,8 +369,8 @@ export function useFirestore() {
     };
 
     // Restock an item
-    const restockItem = async (itemId, itemName, quantity, residentId, residentName) => {
-        await addLog(residentId, residentName, itemId, itemName, 'restocked', quantity);
+    const restockItem = async (itemId, itemName, quantity, residentId, residentName, customDate = null) => {
+        await addLog(residentId, residentName, itemId, itemName, 'restocked', quantity, customDate);
     };
 
     return {

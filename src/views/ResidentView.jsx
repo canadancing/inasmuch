@@ -7,21 +7,33 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
     const [selectedResident, setSelectedResident] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [quantity, setQuantity] = useState(1);
+    const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
     const handleConfirm = async () => {
         if (!selectedResident || !selectedItem) return;
 
+        // Prevent if out of stock
+        if (selectedItem.currentStock < quantity) return;
+
         setIsSubmitting(true);
         try {
+            const dateObj = new Date(logDate);
+            // If it's today, keep it at real-time, otherwise set to noon for past dates
+            const isToday = logDate === new Date().toISOString().split('T')[0];
+            if (!isToday) {
+                dateObj.setHours(12, 0, 0, 0);
+            }
+
             await onLog(
                 selectedResident.id,
                 `${selectedResident.firstName || ''} ${selectedResident.lastName || ''}`.trim() || selectedResident.name || 'Unknown',
                 selectedItem.id,
                 selectedItem.name,
                 'used',
-                quantity
+                quantity,
+                dateObj
             );
 
             // Show success feedback
@@ -31,6 +43,7 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
             // Reset selection
             setSelectedItem(null);
             setQuantity(1);
+            setLogDate(new Date().toISOString().split('T')[0]);
         } catch (error) {
             console.error('Error logging:', error);
         } finally {
@@ -38,7 +51,8 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
         }
     };
 
-    const canSubmit = selectedResident && selectedItem && !isSubmitting;
+    const isOutOfStock = selectedItem && selectedItem.currentStock < quantity;
+    const canSubmit = selectedResident && selectedItem && !isSubmitting && !isOutOfStock;
 
     if (loading) {
         return (
@@ -74,7 +88,7 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
 
             {/* Success Toast */}
             {showSuccess && (
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-lg animate-fade-in flex items-center gap-2">
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-lg animate-fade-in flex items-center gap-2">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -112,12 +126,32 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
                                 <span className="text-3xl">{selectedItem.icon}</span>
                                 <div>
                                     <p className="font-semibold text-gray-900 dark:text-white">{selectedItem.name}</p>
-                                    <p className="text-sm text-gray-500">How many?</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm text-gray-500">How many?</p>
+                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${selectedItem.currentStock === 0
+                                                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                                            }`}>
+                                            {selectedItem.currentStock} in stock
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <QuantityStepper
                                 quantity={quantity}
                                 onChange={setQuantity}
+                            />
+                        </div>
+
+                        {/* Date Selection */}
+                        <div className="mb-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Date</span>
+                            <input
+                                type="date"
+                                value={logDate}
+                                onChange={(e) => setLogDate(e.target.value)}
+                                max={new Date().toISOString().split('T')[0]}
+                                className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-primary-500 transition-all outline-none"
                             />
                         </div>
 
@@ -133,6 +167,8 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
                                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             ) : !selectedResident ? (
                                 'Select a Resident First'
+                            ) : isOutOfStock ? (
+                                'Out of Stock'
                             ) : (
                                 <>
                                     <span>Confirm</span>

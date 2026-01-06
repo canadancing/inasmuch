@@ -31,6 +31,7 @@ export default function AdminPanel({
 }) {
     const [activeTab, setActiveTab] = useState('residents');
     const [restockResident, setRestockResident] = useState(null);
+    const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
     // Resident form state (for add/edit modal)
     const [showResidentModal, setShowResidentModal] = useState(false);
     const [residentForm, setResidentForm] = useState({
@@ -566,11 +567,19 @@ export default function AdminPanel({
 
     const handleRestock = () => {
         if (restockItem && restockResident && restockQuantity > 0) {
+            const dateObj = new Date(restockDate);
+            // If it's today, keep it at real-time, otherwise set to noon for past dates
+            const isToday = restockDate === new Date().toISOString().split('T')[0];
+            if (!isToday) {
+                dateObj.setHours(12, 0, 0, 0);
+            }
+
             const residentFullName = `${restockResident.firstName || ''} ${restockResident.lastName || ''}`.trim() || restockResident.name || 'Unknown';
-            onRestock(restockItem.id, restockItem.name, restockQuantity, restockResident.id, residentFullName);
+            onRestock(restockItem.id, restockItem.name, restockQuantity, restockResident.id, residentFullName, dateObj);
             setRestockItem(null);
             setRestockQuantity(1);
             setRestockResident(null);
+            setRestockDate(new Date().toISOString().split('T')[0]);
         }
     };
 
@@ -1155,9 +1164,24 @@ export default function AdminPanel({
                                     </button>
                                 </div>
 
+                                {/* Date Selection */}
+                                <div className="mb-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Restock Date</span>
+                                    <input
+                                        type="date"
+                                        value={restockDate}
+                                        onChange={(e) => setRestockDate(e.target.value)}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-primary-500 transition-all outline-none"
+                                    />
+                                </div>
+
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setRestockItem(null)}
+                                        onClick={() => {
+                                            setRestockItem(null);
+                                            setRestockDate(new Date().toISOString().split('T')[0]);
+                                        }}
                                         className="btn btn-secondary flex-1"
                                     >
                                         Cancel
