@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, residents, items }) {
     const [editForm, setEditForm] = useState({
+        id: null,
         quantity: 1,
         residentId: null,
         residentName: '',
@@ -39,10 +40,10 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
     };
 
     const handleEdit = (log) => {
-        setEditingLog(log.id);
         const logDate = log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp);
         const dateStr = logDate.toISOString().split('T')[0];
         setEditForm({
+            id: log.id,
             quantity: log.quantity || 1,
             residentId: log.residentId || null,
             residentName: log.residentName || '',
@@ -64,7 +65,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
             residentName: editForm.residentName,
             timestamp: newDate
         });
-        setEditingLog(null);
+        setEditForm(prev => ({ ...prev, id: null }));
     };
 
     const handleDelete = async (logId) => {
@@ -123,7 +124,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                                 </button>
                             </div>
                         </div>
-                    ) : editingLog === log.id ? (
+                    ) : editForm.id === log.id ? (
                         /* Edit Mode */
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 mb-2">
@@ -192,7 +193,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
                             <div className="flex gap-2 pt-2">
                                 <button
-                                    onClick={() => setEditingLog(null)}
+                                    onClick={() => setEditForm(prev => ({ ...prev, id: null }))}
                                     className="flex-1 py-2.5 text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-xl transition-all active:scale-95"
                                 >
                                     Cancel
