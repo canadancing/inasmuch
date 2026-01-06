@@ -3,16 +3,29 @@ import ResidentSelector from '../components/ResidentSelector';
 import ItemGrid from '../components/ItemGrid';
 import QuantityStepper from '../components/QuantityStepper';
 
-export default function ResidentView({ residents, items, onLog, loading, isDemo }) {
+export default function ResidentView({ residents, items, onLog, loading, isDemo, isAdmin, role, requestAdminAccess }) {
     const [selectedResident, setSelectedResident] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [requestSent, setRequestSent] = useState(false);
+
+    const handleRequestAdmin = async () => {
+        setIsSubmitting(true);
+        try {
+            await requestAdminAccess();
+            setRequestSent(true);
+        } catch (error) {
+            console.error('Error requesting admin:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleConfirm = async () => {
-        if (!selectedResident || !selectedItem) return;
+        if (!selectedResident || !selectedItem || !isAdmin) return;
 
         // Prevent if out of stock
         if (selectedItem.currentStock < quantity) return;
@@ -58,7 +71,7 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
     };
 
     const isOutOfStock = selectedItem && selectedItem.currentStock < quantity;
-    const canSubmit = selectedResident && selectedItem && !isSubmitting && !isOutOfStock;
+    const canSubmit = selectedResident && selectedItem && !isSubmitting && !isOutOfStock && isAdmin;
 
     if (loading) {
         return (
@@ -84,13 +97,47 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
                         <p className="text-[10px] uppercase tracking-[0.2em] text-primary-500 dark:text-primary-400 font-bold mt-1">Supply Tracker</p>
                     </div>
                 </div>
-                {isDemo && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">Demo</span>
-                    </div>
-                )}
+
+                <div className="flex items-center gap-2">
+                    {!isAdmin && (
+                        <div className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Read Only</span>
+                        </div>
+                    )}
+                    {isDemo && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">Demo</span>
+                        </div>
+                    )}
+                </div>
             </div>
+
+            {/* Read-Only Banner / Request Access */}
+            {!isAdmin && (
+                <div className="mb-6 card p-4 bg-primary-50 dark:bg-primary-900/10 border-primary-100 dark:border-primary-800 shadow-sm animate-fade-in">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🛡️</span>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Admin Privileges Required</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">You can view stock, but need approval to log usage.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleRequestAdmin}
+                            disabled={requestSent || isSubmitting}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${requestSent
+                                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                    : 'bg-primary-500 text-white shadow-lg shadow-primary-500/20 active:scale-95'
+                                }`}
+                        >
+                            {requestSent ? 'Request Sent' : 'Request Access'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Success Toast */}
             {showSuccess && (
@@ -114,7 +161,7 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
             {/* Item Grid */}
             <div className="flex-1 overflow-y-auto mb-6">
                 <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                    What did you use?
+                    Current Stock
                 </h2>
                 <ItemGrid
                     items={items}
@@ -126,7 +173,7 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
             {/* Bottom Action Bar */}
             {selectedItem && (
                 <div className="sticky bottom-0 bg-gradient-to-t from-gray-50 dark:from-gray-950 pt-4 pb-safe animate-slide-up">
-                    <div className="card p-4">
+                    <div className="card p-4 shadow-2xl border-primary-100 dark:border-primary-900/30">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <span className="text-3xl">{selectedItem.icon}</span>
@@ -143,47 +190,59 @@ export default function ResidentView({ residents, items, onLog, loading, isDemo 
                                     </div>
                                 </div>
                             </div>
-                            <QuantityStepper
-                                quantity={quantity}
-                                onChange={setQuantity}
-                            />
-                        </div>
-
-                        {/* Date Selection */}
-                        <div className="mb-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Date</span>
-                            <input
-                                type="date"
-                                value={logDate}
-                                onChange={(e) => setLogDate(e.target.value)}
-                                max={new Date().toISOString().split('T')[0]}
-                                className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-primary-500 transition-all outline-none"
-                            />
-                        </div>
-
-                        <button
-                            onClick={handleConfirm}
-                            disabled={!canSubmit}
-                            className={`btn w-full text-lg ${canSubmit
-                                ? 'btn-primary'
-                                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                }`}
-                        >
-                            {isSubmitting ? (
-                                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : !selectedResident ? (
-                                'Select a Resident First'
-                            ) : isOutOfStock ? (
-                                'Out of Stock'
-                            ) : (
-                                <>
-                                    <span>Confirm</span>
-                                    <span className="ml-2 opacity-70">
-                                        {quantity}× {selectedItem.name}
-                                    </span>
-                                </>
+                            {isAdmin && (
+                                <QuantityStepper
+                                    quantity={quantity}
+                                    onChange={setQuantity}
+                                />
                             )}
-                        </button>
+                        </div>
+
+                        {isAdmin ? (
+                            <>
+                                {/* Date Selection */}
+                                <div className="mb-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Date</span>
+                                    <input
+                                        type="date"
+                                        value={logDate}
+                                        onChange={(e) => setLogDate(e.target.value)}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-primary-500 transition-all outline-none"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleConfirm}
+                                    disabled={!canSubmit}
+                                    className={`btn w-full text-lg ${canSubmit
+                                        ? 'btn-primary shadow-lg shadow-primary-500/20'
+                                        : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {isSubmitting ? (
+                                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                                    ) : !selectedResident ? (
+                                        'Select a Resident First'
+                                    ) : isOutOfStock ? (
+                                        'Out of Stock'
+                                    ) : (
+                                        <>
+                                            <span>Confirm</span>
+                                            <span className="ml-2 opacity-70">
+                                                {quantity}× {selectedItem.name}
+                                            </span>
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        ) : (
+                            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <p className="text-center text-xs text-gray-400 font-medium italic">
+                                    Sign in as Admin to log usage
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

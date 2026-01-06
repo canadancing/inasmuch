@@ -12,7 +12,9 @@ import {
     doc,
     db,
     serverTimestamp,
-    isFirebaseConfigured
+    isFirebaseConfigured,
+    usersRef,
+    getDocs
 } from '../firebase/config';
 
 // Demo data for when Firebase is not configured
@@ -92,6 +94,7 @@ export function useFirestore() {
     const [residents, setResidents] = useState([]);
     const [items, setItems] = useState([]);
     const [logs, setLogs] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isDemo, setIsDemo] = useState(false);
@@ -158,15 +161,26 @@ export function useFirestore() {
             }
         );
 
+        const unsubUsers = onSnapshot(usersRef, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || null,
+                lastLogin: doc.data().lastLogin?.toDate() || null
+            }));
+            setUsers(data);
+        });
+
         return () => {
             unsubResidents();
             unsubItems();
             unsubLogs();
+            unsubUsers();
         };
     }, []);
 
     // Add a log entry
-    const addLog = async (residentId, residentName, itemId, itemName, action, quantity, customDate = null) => {
+    const addLog = async (residentId, residentName, itemId, itemName, action, quantity, customDate = null, performedBy = null) => {
         if (isDemo) {
             const newLog = {
                 id: Date.now().toString(),
@@ -176,7 +190,8 @@ export function useFirestore() {
                 itemName,
                 action,
                 quantity,
-                timestamp: customDate || new Date()
+                timestamp: customDate || new Date(),
+                performedBy: performedBy?.email || 'Demo User'
             };
             setLogs(prev => [newLog, ...prev]);
 
@@ -205,7 +220,9 @@ export function useFirestore() {
                 itemName,
                 action,
                 quantity,
-                timestamp: customDate || serverTimestamp()
+                timestamp: customDate || serverTimestamp(),
+                performedBy: performedBy?.email || 'Unknown',
+                performedByUid: performedBy?.uid || null
             });
 
             // Update item stock
@@ -441,14 +458,30 @@ export function useFirestore() {
     };
 
     // Restock an item
-    const restockItem = async (itemId, itemName, quantity, residentId, residentName, customDate = null) => {
-        await addLog(residentId, residentName, itemId, itemName, 'restocked', quantity, customDate);
+    const restockItem = async (itemId, itemName, quantity, residentId, residentName, customDate = null, performedBy = null) => {
+        await addLog(residentId, residentName, itemId, itemName, 'restocked', quantity, customDate, performedBy);
+    };
+
+    // Permission Management (for Super Admin)
+    const updateUserRole = async (uid, newRole) => {
+        if (isDemo) return;
+        try {
+            await updateDoc(doc(db, 'users', uid), {
+                role: newRole,
+                requestPending: false,
+                updatedAt: serverTimestamp()
+            });
+        } catch (err) {
+            console.error('Error updating user role:', err);
+            throw err;
+        }
     };
 
     return {
         residents: residents.filter(r => r.active !== false),
         items,
         logs,
+        users,
         loading,
         error,
         isDemo,
@@ -461,6 +494,7 @@ export function useFirestore() {
         removeItem,
         deleteLog,
         updateLog,
-        restockItem
+        restockItem,
+        updateUserRole
     };
 }

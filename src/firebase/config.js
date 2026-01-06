@@ -3,7 +3,8 @@
 // See FIREBASE_SETUP.md for instructions
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch, setDoc, getDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,6 +24,11 @@ const db = getFirestore(app);
 export const residentsRef = collection(db, 'residents');
 export const itemsRef = collection(db, 'items');
 export const logsRef = collection(db, 'logs');
+export const usersRef = collection(db, 'users');
+
+// Auth
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
 // Helper functions
 export {
@@ -37,7 +43,9 @@ export {
     orderBy,
     serverTimestamp,
     getDocs,
-    writeBatch
+    writeBatch,
+    setDoc,
+    getDoc
 };
 
 // Check if Firebase is configured

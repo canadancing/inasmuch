@@ -222,8 +222,14 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                                 <p className="text-gray-600 dark:text-gray-400 mt-0.5">
                                     {log.quantity}× {log.itemName}
                                 </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                    {formatDate(log.timestamp)}
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-2">
+                                    <span>{formatDate(log.timestamp)}</span>
+                                    {log.performedBy && (
+                                        <>
+                                            <span className="opacity-30">•</span>
+                                            <span className="italic truncate max-w-[120px]" title={log.performedBy}>by {log.performedBy}</span>
+                                        </>
+                                    )}
                                 </p>
                             </div>
                             {/* Edit/Delete buttons */}
