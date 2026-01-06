@@ -6,12 +6,13 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDeoz2takCZM00ycA87NQOogpLutxZsA9s",
+    authDomain: "inasmuch-909c7.firebaseapp.com",
+    projectId: "inasmuch-909c7",
+    storageBucket: "inasmuch-909c7.firebasestorage.app",
+    messagingSenderId: "984547364434",
+    appId: "1:984547364434:web:1caed19d0d50cd5d89d98b",
+    measurementId: "G-T7ZVHL5G5D"
 };
 
 // Initialize Firebase
