@@ -1,12 +1,6 @@
-export default function ItemCard({ item, isSelected, onSelect }) {
-    return (
-        <button
-            onClick={() => onSelect(item)}
-            className={`card-interactive p-6 flex flex-col items-center gap-4 transition-all duration-500 ${isSelected
-                ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-[0_0_30px_rgba(14,165,233,0.15)] scale-105'
-                : ''
-                }`}
-        >
+export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false }) {
+    const content = (
+        <>
             <div className={`text-5xl transition-transform duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>{item.icon}</div>
             <span className={`text-base font-black text-center leading-tight tracking-tight transition-colors duration-300 ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>
                 {item.name}
@@ -19,6 +13,26 @@ export default function ItemCard({ item, isSelected, onSelect }) {
                 }`}>
                 {item.currentStock} in stock
             </div>
+        </>
+    );
+
+    if (showStockOnly) {
+        return (
+            <div className="card p-6 flex flex-col items-center gap-4">
+                {content}
+            </div>
+        );
+    }
+
+    return (
+        <button
+            onClick={() => onSelect(item)}
+            className={`card-interactive p-6 flex flex-col items-center gap-4 transition-all duration-500 ${isSelected
+                ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-[0_0_30px_rgba(14,165,233,0.15)] scale-105'
+                : ''
+                }`}
+        >
+            {content}
         </button>
     );
 }

@@ -12,6 +12,7 @@ import {
     signInWithPopup,
     signOut,
     onAuthStateChanged,
+    getRedirectResult,
     setPersistence,
     browserLocalPersistence
 } from 'firebase/auth';
