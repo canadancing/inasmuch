@@ -7,6 +7,7 @@ import ThemeToggle from './components/ThemeToggle';
 import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
+import LogUsageModal from './components/LogUsageModal';
 import { useAuth } from './hooks/useAuth';
 
 export default function App() {
@@ -62,25 +63,18 @@ export default function App() {
         getTagStyles
     } = useTags();
 
+    const [showLogModal, setShowLogModal] = useState(false);
+
     const navItems = [
         { id: 'resident', label: 'Log', icon: '📝' },
+        { id: 'add', label: 'Add', icon: '+', isAction: true },
         { id: 'admin', label: 'Admin', icon: '⚙️' },
         { id: 'account', label: 'Account', icon: '👤' },
     ];
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-500">
-            {/* Floating Top Header: Profile & Theme */}
-            <header className="fixed top-6 left-6 right-6 z-50 flex justify-between items-center pointer-events-none">
-                <div className="flex items-center gap-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-1.5 rounded-2xl border border-white/20 dark:border-gray-800 shadow-2xl pointer-events-auto">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-xs shadow-sm">I</div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white pr-2">Tracker</span>
-                </div>
 
-                <div className="flex items-center gap-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-1.5 rounded-2xl border border-white/20 dark:border-gray-800 shadow-2xl pointer-events-auto">
-                    <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
-                </div>
-            </header>
 
             {/* Main Content */}
             <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 py-24 pb-36 animate-fade-in">
@@ -173,24 +167,57 @@ export default function App() {
                 {navItems.map((item) => (
                     <button
                         key={item.id}
-                        onClick={() => setCurrentView(item.id)}
-                        className={`relative z-10 flex flex-col items-center justify-center gap-1.5 px-6 py-2 rounded-3xl min-w-[90px] transition-all duration-300 group`}
+                        onClick={() => {
+                            if (item.isAction) {
+                                if (!user) {
+                                    loginWithGoogle();
+                                } else if (isAdmin) {
+                                    setShowLogModal(true);
+                                }
+                            } else {
+                                setCurrentView(item.id);
+                            }
+                        }}
+                        className={`relative z-10 flex flex-col items-center justify-center gap-1.5 px-6 py-2 rounded-3xl min-w-[90px] transition-all duration-300 group ${item.isAction ? 'bg-gradient-to-br from-primary-500 to-accent-500' : ''
+                            }`}
                     >
-                        <span className={`text-2xl transition-all duration-500 ${currentView === item.id
-                            ? 'scale-110 -translate-y-1 drop-shadow-lg'
-                            : 'group-hover:scale-110 group-hover:-translate-y-0.5 opacity-60'
+                        <span className={`transition-all duration-500 ${item.isAction
+                            ? 'text-4xl font-bold text-white scale-110 group-hover:scale-125'
+                            : `text-2xl ${currentView === item.id
+                                ? 'scale-110 -translate-y-1 drop-shadow-lg'
+                                : 'group-hover:scale-110 group-hover:-translate-y-0.5 opacity-60'
+                            }`
                             }`}>
                             {item.icon}
                         </span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${currentView === item.id
-                            ? 'text-primary-600 dark:text-primary-300 opacity-100'
-                            : 'text-gray-400 dark:text-gray-500 opacity-60 group-hover:opacity-100'
-                            }`}>
-                            {item.label}
-                        </span>
+                        {!item.isAction && (
+                            <span className={`text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${currentView === item.id
+                                ? 'text-primary-600 dark:text-primary-300 opacity-100'
+                                : 'text-gray-400 dark:text-gray-500 opacity-60 group-hover:opacity-100'
+                                }`}>
+                                {item.label}
+                            </span>
+                        )}
                     </button>
                 ))}
             </nav>
+
+            {/* Theme Toggle - Bottom Right */}
+            <div className="fixed bottom-32 right-8 z-40">
+                <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-2 rounded-2xl border border-white/20 dark:border-gray-800 shadow-2xl">
+                    <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
+                </div>
+            </div>
+
+            {/* Log Usage Modal */}
+            <LogUsageModal
+                isOpen={showLogModal}
+                onClose={() => setShowLogModal(false)}
+                residents={residents}
+                items={items}
+                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date, user)}
+                user={user}
+            />
         </div>
     );
 }
