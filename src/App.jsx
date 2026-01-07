@@ -288,7 +288,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 isOpen={showRestockModal}
                 onClose={() => setShowRestockModal(false)}
                 items={items}
-                onRestock={onRestock}
+                onRestock={restockItem}
                 setCurrentView={setCurrentView}
                 user={user}
             />
