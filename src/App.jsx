@@ -54,8 +54,9 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         tagsMap
     } = useTags();
 
+    const pendingRequestsCount = usePendingRequestsCount(user);
     const unreadNotificationsCount = useUnreadNotificationsCount(user);
-    const totalAccountNotifications = pendingRequestsCount + unreadNotificationsCount;
+    const totalAccountNotifications = (pendingRequestsCount || 0) + (unreadNotificationsCount || 0);
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
