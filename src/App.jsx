@@ -13,6 +13,7 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
+import RestockModal from ./components/RestockModal;
 import AccessRequestModal from './components/AccessRequestModal';
 
 export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
@@ -238,6 +239,15 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 residents={residents}
                 items={items}
                 onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+                user={user}
+            />
+
+            {/* Restock Modal */}
+            <RestockModal
+                isOpen={showRestockModal}
+                onClose={() => setShowRestockModal(false)}
+                items={items}
+                onRestock={onRestock}
                 user={user}
             />
         </div>
