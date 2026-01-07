@@ -107,6 +107,7 @@ export default function AdminView({
                 <AuditLog
                     logs={auditLogs}
                     loading={loading}
+                    currentInventory={currentInventory}
                 />
             )}
 
