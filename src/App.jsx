@@ -15,6 +15,8 @@ import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
 import RestockModal from './components/RestockModal';
 import AccessRequestModal from './components/AccessRequestModal';
+import SuperAdminView from './views/SuperAdminView';
+import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
 
 export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
     const [currentView, setCurrentView] = useState('stock');
@@ -101,18 +103,29 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                     </svg>
                 );
+            case 'superadmin':
+                return (
+                    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                    </svg>
+                );
             default:
                 return null;
         }
     };
 
-    const navItems = [
+    // Build nav items - add super admin only for authorized users
+    const baseNavItems = [
         { id: 'stock', label: 'STOCK' },
         { id: 'log', label: 'LOG', isAction: true },
         { id: 'restock', label: 'RESTOCK', isAction: true },
         { id: 'admin', label: 'ADMIN' },
         { id: 'account', label: 'ACCOUNT' },
     ];
+
+    const navItems = checkIsSuperAdmin(user)
+        ? [...baseNavItems, { id: 'superadmin', label: 'SUPER' }]
+        : baseNavItems;
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-500">
@@ -218,6 +231,8 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         onLogin={loginWithGoogle}
                         onLogout={logout}
                     />
+                ) : currentView === 'superadmin' ? (
+                    <SuperAdminView user={user} />
                 ) : null}
             </main>
 
