@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import AccessRequestModal from '../components/AccessRequestModal';
+import PendingRequestsSection from '../components/PendingRequestsSection';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -130,6 +131,9 @@ export default function AccountView({ user, onLogin, onLogout }) {
                     </p>
                 </div>
             </div>
+
+            {/* Pending Requests (for owners) */}
+            <PendingRequestsSection user={user} />
 
             {/* Find Users */}
             <div className="card p-6">
