@@ -26,29 +26,57 @@ const demoResidents = [
 ];
 
 export function useFirestore(user) {
-    // Get inventory context - but handle case where it might not be ready
-    let currentInventoryId = null;
-    let permissions = null;
-
-    try {
-        const inventory = useInventory();
-        currentInventoryId = inventory.currentInventoryId;
-        permissions = inventory.permissions;
-    } catch (error) {
-        // Context not available yet, will use demo mode
-        console.log('InventoryContext not available, using demo mode');
-    }
+    const inventory = useInventory();
+    const currentInventoryId = inventory.currentInventoryId;
+    const permissions = inventory.permissions;
 
     const [items, setItems] = useState([]);
     const [residents, setResidents] = useState([]);
     const [logs, setLogs] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const isDemo = !currentInventoryId;
 
+    // Fetch all users (Super Admin only - but we'll fetch always for permissions view)
+    useEffect(() => {
+        if (!user) return;
+
+        const usersRef = collection(db, 'users');
+        const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+            const usersList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setUsers(usersList);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    // Update user role
+    const updateUserRole = async (userId, newRole) => {
+        if (user?.email !== 'loading800@gmail.com') { // Hardcoded super-admin check for now
+            console.warn('Unauthorized role change attempt');
+            return;
+        }
+
+        const userDocRef = doc(db, 'users', userId);
+        await updateDoc(userDocRef, {
+            role: newRole,
+            updatedAt: serverTimestamp()
+        });
+
+        await addAuditEntry('role-updated', {
+            targetUserId: userId,
+            newRole
+        });
+    };
+
     // Fetch items from current inventory
     useEffect(() => {
+        // ... rest of the effects ...
         if (!currentInventoryId) {
             setItems(demoItems);
             setResidents(demoResidents);
@@ -401,6 +429,8 @@ export function useFirestore(user) {
         addResident,
         updateResident,
         deleteResident,
-        restockItem
+        restockItem,
+        updateUserRole,
+        users
     };
 }

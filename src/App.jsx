@@ -26,7 +26,11 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         updateResident,
         deleteResident,
         addLog,
-        restockItem
+        updateLog,
+        deleteLog,
+        restockItem,
+        updateUserRole,
+        users
     } = useFirestore(user);
 
     const {
@@ -120,7 +124,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         items={items}
                         logs={logs}
                         auditLogs={auditLogs}
-                        users={users} // Item props
+                        users={users}
                         onAddItem={addItem}
                         onUpdateItem={updateItem}
                         onDeleteItem={deleteItem}
@@ -132,6 +136,9 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         // Log actions
                         onDeleteLog={deleteLog}
                         onUpdateLog={updateLog}
+                        // Admin actions
+                        onUpdateUserRole={updateUserRole}
+                        onRequestAdminAccess={requestAdminAccess}
                         // Icon props
                         customIcons={customIcons}
                         onAddIcon={addCustomIcon}
@@ -152,7 +159,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         isSuperAdmin={isSuperAdmin}
                         role={role}
                         permissions={inventoryPermissions}
-                        onRequestAdminAccess={requestAdminAccess}
                     />
                 ) : currentView === 'account' ? (
                     <AccountView
