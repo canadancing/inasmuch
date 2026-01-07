@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTheme } from './hooks/useTheme';
+import InventorySwitcher from './components/InventorySwitcher';
 import { useFirestore } from './hooks/useFirestore';
 import { useCustomIcons } from './hooks/useCustomIcons';
 import { useTags } from './hooks/useTags';
@@ -9,43 +9,32 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
-import InventorySwitcher from './components/InventorySwitcher';
 
-export default function App({ user, role, loading: authLoading, loginWithGoogle, logout, isAdmin, requestAdminAccess }) {
+export default function App({ user, loading, loginWithGoogle, logout, isAdmin, role, requestAdminAccess }) {
     const [currentView, setCurrentView] = useState('stock');
-    const { isDark, toggleTheme } = useTheme();
+
     const {
-        residents,
         items,
+        residents,
         logs,
-        loading,
-        error,
-        isDemo,
-        addLog,
-        addResident,
-        updateResident,
-        removeResident,
         addItem,
         updateItem,
-        removeItem,
-        deleteLog,
-        updateLog,
-        restockItem,
-        updateUserRole,
-        users
-    } = useFirestore();
+        deleteItem,
+        addResident,
+        updateResident,
+        deleteResident,
+        addLog
+    } = useFirestore(user);
 
     const {
         customIcons,
         addCustomIcon,
         updateCustomIcon,
-        removeCustomIcon,
-        customIconsMap
-    } = useCustomIcons();
+        deleteCustomIcon
+    } = useCustomIcons(user);
 
     const {
         tags,
-        tagsMap,
         tagColors,
         addTag,
         updateTag,
@@ -74,92 +63,89 @@ export default function App({ user, role, loading: authLoading, loginWithGoogle,
                             I
                         </div>
                         <div>
-                            <h1 className="font-black text-2xl tracking-tight text-gray-900 dark:text-white leading-none uppercase">Inasmuch</h1>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-primary-500 dark:text-primary-400 font-bold">Supply Tracker</p>
+                            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
+                                INASMUCH
+                            </h1>
+                            <p className="text-xs text-primary-500 dark:text-primary-400 font-semibold tracking-wider uppercase">
+                                Supply Tracker
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        {user && <InventorySwitcher />}
-                        <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
-                    </div>
+
+                    {user && <InventorySwitcher />}
+
+                    <ThemeToggle />
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-8 pt-28 pb-36 animate-fade-in">
-                {(authLoading || loading) && !isDemo ? (
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4" />
-                        <p className="text-gray-500 dark:text-gray-400 font-medium">Preparing tracker...</p>
+            <main className="flex-1 pt-24 pb-32 px-6 max-w-5xl mx-auto w-full overflow-y-auto">
+                {!user ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-4xl shadow-2xl mb-6">
+                            I
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
+                            Welcome to INASMUCH
+                        </h2>
+                        <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
+                            Track shared house supplies with ease. Sign in to get started.
+                        </p>
+                        <button
+                            onClick={loginWithGoogle}
+                            className="btn-primary px-8 py-4 text-lg"
+                        >
+                            Sign in with Google
+                        </button>
                     </div>
-                ) : (
-                    <>
-                        {currentView === 'stock' && (
-                            <ResidentView
-                                residents={residents}
-                                items={items}
-                                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date, user)}
-                                loading={loading}
-                                isDemo={isDemo}
-                                isAdmin={isAdmin}
-                                requestAdminAccess={requestAdminAccess}
-                                role={role}
-                                user={user}
-                                onLogin={loginWithGoogle}
-                            />
-                        )}
-                        {currentView === 'admin' && (
-                            <AdminView
-                                residents={residents}
-                                items={items}
-                                logs={logs}
-                                loading={loading}
-                                isDemo={isDemo}
-                                isDark={isDark}
-                                onAddResident={addResident}
-                                onUpdateResident={updateResident}
-                                onRemoveResident={removeResident}
-                                onAddItem={addItem}
-                                onUpdateItem={updateItem}
-                                onRemoveItem={removeItem}
-                                onRestock={(itemId, itemName, qty, resId, resName, date) => restockItem(itemId, itemName, qty, resId, resName, date, user)}
-                                onDeleteLog={deleteLog}
-                                onUpdateLog={updateLog}
-                                customIcons={customIcons}
-                                onAddCustomIcon={addCustomIcon}
-                                onUpdateCustomIcon={updateCustomIcon}
-                                onRemoveCustomIcon={removeCustomIcon}
-                                customIconsMap={customIconsMap}
-                                tags={tags}
-                                tagsMap={tagsMap}
-                                tagColors={tagColors}
-                                onAddTag={addTag}
-                                onUpdateTag={updateTag}
-                                onRemoveTag={removeTag}
-                                getTagStyles={getTagStyles}
-                                user={user}
-                                isSuperAdmin={isSuperAdmin}
-                                onUpdateUserRole={updateUserRole}
-                                users={users}
-                            />
-                        )}
-                        {currentView === 'account' && (
-                            <AccountView
-                                user={user}
-                                role={role}
-                                onLogin={loginWithGoogle}
-                                onLogout={logout}
-                                requestAdminAccess={requestAdminAccess}
-                                isDark={isDark}
-                            />
-                        )}
-                    </>
-                )}
+                ) : currentView === 'stock' ? (
+                    <ResidentView
+                        items={items}
+                        residents={residents}
+                        onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date, user)}
+                        customIcons={customIcons}
+                        tags={tags}
+                        getTagStyles={getTagStyles}
+                        user={user}
+                    />
+                ) : currentView === 'admin' ? (
+                    <AdminView
+                        items={items}
+                        residents={residents}
+                        logs={logs}
+                        onAddItem={addItem}
+                        onUpdateItem={updateItem}
+                        onDeleteItem={deleteItem}
+                        onAddResident={addResident}
+                        onUpdateResident={updateResident}
+                        onDeleteResident={deleteResident}
+                        customIcons={customIcons}
+                        onAddIcon={addCustomIcon}
+                        onUpdateIcon={updateCustomIcon}
+                        onDeleteIcon={deleteCustomIcon}
+                        tags={tags}
+                        tagColors={tagColors}
+                        onAddTag={addTag}
+                        onUpdateTag={updateTag}
+                        onRemoveTag={removeTag}
+                        getTagStyles={getTagStyles}
+                        user={user}
+                        isAdmin={isAdmin}
+                        role={role}
+                        onRequestAdminAccess={requestAdminAccess}
+                    />
+                ) : currentView === 'account' ? (
+                    <AccountView
+                        user={user}
+                        onLogin={loginWithGoogle}
+                        onLogout={logout}
+                    />
+                ) : null}
             </main>
 
-            {/* iOS App Store-Style Navigation Dock */}
+            {/* Bottom Nav - iOS Dock Style */}
             <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-1 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl px-4 py-3 rounded-[28px] border border-gray-200/30 dark:border-gray-700/30 shadow-2xl">
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
                     {navItems.map((item) => {
                         const isActive = currentView === item.id;
                         return (
@@ -176,8 +162,16 @@ export default function App({ user, role, loading: authLoading, loginWithGoogle,
                                         setCurrentView(item.id);
                                     }
                                 }}
-                                className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30"
+                                className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 relative"
                             >
+                                {/* iOS Notification Badge */}
+                                {item.id === 'account' && pendingRequestsCount > 0 && (
+                                    <div className="absolute -top-1 right-3 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-900 dark:border-gray-950 z-10">
+                                        <span className="text-white text-[10px] font-bold">
+                                            {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                                        </span>
+                                    </div>
+                                )}
                                 <span className={`text-2xl mb-1 transition-all ${isActive ? 'scale-110' : 'opacity-60'
                                     }`}>{item.icon}</span>
                                 <span className={`text-[10px] font-semibold tracking-tight transition-all ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
