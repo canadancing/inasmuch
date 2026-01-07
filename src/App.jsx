@@ -11,7 +11,7 @@ import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
 
-export default function App({ user, loading, loginWithGoogle, logout, isAdmin, role, permissions, requestAdminAccess, isDark, toggleTheme }) {
+export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
     const [currentView, setCurrentView] = useState('stock');
 
     const {
@@ -133,6 +133,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
                         getTagStyles={getTagStyles}
                         user={user}
                         isAdmin={isAdmin}
+                        isSuperAdmin={isSuperAdmin}
                         role={role}
                         permissions={inventoryPermissions}
                         onRequestAdminAccess={requestAdminAccess}

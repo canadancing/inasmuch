@@ -32,8 +32,8 @@ export function InventoryProvider({ children, user }) {
                 const ownedQuery = query(ownedRef, where('ownerId', '==', user.uid));
                 const ownedSnapshot = await getDocs(ownedQuery);
                 const ownedInventories = ownedSnapshot.docs.map(doc => ({
-                    id: doc.id,
                     ...doc.data(),
+                    id: doc.id,
                     isOwner: true
                 }));
 
@@ -41,7 +41,7 @@ export function InventoryProvider({ children, user }) {
                 const allRef = collection(db, 'inventories');
                 const allSnapshot = await getDocs(allRef);
                 const collaboratedInventories = allSnapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .map(doc => ({ ...doc.data(), id: doc.id }))
                     .filter(inv => inv.collaborators && inv.collaborators[user.uid])
                     .map(inv => ({ ...inv, isOwner: false }));
 
@@ -79,44 +79,39 @@ export function InventoryProvider({ children, user }) {
         return () => unsubscribe();
     }, [user, currentInventoryId]);
 
-    // Update current inventory when selection changes
+    // Update current inventory and permissions when selection changes
     useEffect(() => {
-        if (currentInventoryId) {
+        if (currentInventoryId && inventories.length > 0) {
             const inventory = inventories.find(inv => inv.id === currentInventoryId);
-            setCurrentInventory(inventory);
-
-            if (user && inventory) {
-                setPermissions(calculatePermissions(user.uid, inventory));
+            if (inventory) {
+                setCurrentInventory(inventory);
+                setPermissions(calculatePermissions(inventory, user.uid));
+                localStorage.setItem('currentInventoryId', currentInventoryId);
             }
-
-            // Save to localStorage
-            localStorage.setItem('currentInventoryId', currentInventoryId);
         }
     }, [currentInventoryId, inventories, user]);
 
-    const switchInventory = (inventoryId) => {
-        setCurrentInventoryId(inventoryId);
-    };
-
-    const value = {
-        inventories,
-        currentInventoryId,
-        currentInventory,
-        permissions,
-        loading,
-        switchInventory
+    const switchInventory = (id) => {
+        setCurrentInventoryId(id);
     };
 
     return (
-        <InventoryContext.Provider value={value}>
+        <InventoryContext.Provider value={{
+            inventories,
+            currentInventory,
+            currentInventoryId,
+            permissions,
+            switchInventory,
+            loading
+        }}>
             {children}
         </InventoryContext.Provider>
     );
 }
 
-export function useInventory() {
+export const useInventory = () => {
     const context = useContext(InventoryContext);
-    if (context === undefined) {
+    if (!context) {
         throw new Error('useInventory must be used within an InventoryProvider');
     }
     return context;
