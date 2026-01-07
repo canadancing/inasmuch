@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
