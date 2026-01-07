@@ -42,6 +42,7 @@ export function useFirestore(user) {
     const [items, setItems] = useState([]);
     const [residents, setResidents] = useState([]);
     const [logs, setLogs] = useState([]);
+    const [auditLogs, setAuditLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const isDemo = !currentInventoryId;
@@ -113,6 +114,41 @@ export function useFirestore(user) {
         return () => unsubscribe();
     }, [currentInventoryId]);
 
+    // Fetch audit logs (Immutable Trail)
+    useEffect(() => {
+        if (!currentInventoryId) return;
+
+        const auditRef = collection(db, 'inventories', currentInventoryId, 'audit');
+        const auditQuery = query(auditRef, orderBy('date', 'desc'));
+
+        const unsubscribe = onSnapshot(auditQuery, (snapshot) => {
+            const auditList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setAuditLogs(auditList);
+        });
+
+        return () => unsubscribe();
+    }, [currentInventoryId]);
+    // Helper: Add Audit Entry (Immutable)
+    const addAuditEntry = async (action, details = {}) => {
+        if (!currentInventoryId) return;
+
+        try {
+            const auditRef = collection(db, 'inventories', currentInventoryId, 'audit');
+            await addDoc(auditRef, {
+                action,
+                performedBy: user?.uid,
+                performedByName: user?.displayName || 'Unknown',
+                date: serverTimestamp(),
+                ...details
+            });
+        } catch (error) {
+            console.error('Audit failed:', error);
+        }
+    };
+
     // Add log (with permission check)
     const addLog = async (resId, resName, itemId, itemName, action, qty, date) => {
         if (!permissions?.canEdit) {
@@ -121,7 +157,7 @@ export function useFirestore(user) {
         }
 
         const logsRef = collection(db, 'inventories', currentInventoryId, 'logs');
-        await addDoc(logsRef, {
+        const logDoc = {
             residentId: resId,
             residentName: resName,
             itemId,
@@ -131,6 +167,16 @@ export function useFirestore(user) {
             date: date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date(date)),
             performedBy: user?.uid,
             performedByName: user?.displayName || 'Unknown'
+        };
+
+        const docRef = await addDoc(logsRef, logDoc);
+
+        // ALWAYS duplicate to immutable Audit Trail
+        await addAuditEntry(`log-${action}`, {
+            logId: docRef.id,
+            residentName: resName,
+            itemName,
+            quantity: qty
         });
 
         // Update item stock
@@ -148,6 +194,15 @@ export function useFirestore(user) {
                 currentStock: newStock,
                 updatedAt: serverTimestamp(),
                 updatedBy: user?.uid
+            });
+
+            // Track stock change in audit
+            await addAuditEntry('stock-updated', {
+                itemId,
+                itemName,
+                action,
+                quantity: qty,
+                note: `Stock auto-adjusted via usage log`
             });
         }
     };
@@ -171,8 +226,12 @@ export function useFirestore(user) {
             updatedBy: user?.uid
         });
 
-        // Log this action
-        await addLog(null, 'Admin', docRef.id, name, 'created-item', 1, new Date());
+        // Log this action in Audit Trail
+        await addAuditEntry('created-item', {
+            itemId: docRef.id,
+            itemName: name,
+            icon
+        });
     };
 
     // Update item (with permission check)
@@ -189,9 +248,13 @@ export function useFirestore(user) {
             updatedBy: user?.uid
         });
 
-        // Log this action
+        // Log this action in Audit Trail
         const itemName = updates.name || items.find(i => i.id === itemId)?.name || 'Item';
-        await addLog(null, 'Admin', itemId, itemName, 'updated-item', 0, new Date());
+        await addAuditEntry('updated-item', {
+            itemId,
+            itemName,
+            updates: Object.keys(updates)
+        });
     };
 
     // Delete item (owner only)
@@ -205,8 +268,11 @@ export function useFirestore(user) {
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
         await deleteDoc(itemDocRef);
 
-        // Log this action
-        await addLog(null, 'Admin', itemId, itemName, 'deleted-item', 0, new Date());
+        // Log this action in Audit Trail
+        await addAuditEntry('deleted-item', {
+            itemId,
+            itemName
+        });
     };
 
     // Add resident (with permission check)
@@ -225,9 +291,12 @@ export function useFirestore(user) {
             updatedBy: user?.uid
         });
 
-        // Log this action
+        // Log this action in Audit Trail
         const resName = `${residentData.firstName} ${residentData.lastName}`.trim();
-        await addLog(docRef.id, resName, null, 'Resident', 'move-in', 1, new Date());
+        await addAuditEntry('resident-added', {
+            residentId: docRef.id,
+            residentName: resName
+        });
     };
 
     // Update resident (with permission check)
@@ -244,9 +313,13 @@ export function useFirestore(user) {
             updatedBy: user?.uid
         });
 
-        // Log this action
+        // Log this action in Audit Trail
         const resName = updates.firstName ? `${updates.firstName} ${updates.lastName || ''}`.trim() : (residents.find(r => r.id === residentId)?.firstName || 'Resident');
-        await addLog(residentId, resName, null, 'Resident', 'updated-resident', 0, new Date());
+        await addAuditEntry('resident-updated', {
+            residentId,
+            residentName,
+            updates: Object.keys(updates)
+        });
     };
 
     // Delete resident (owner only)
@@ -261,48 +334,61 @@ export function useFirestore(user) {
         const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
         await deleteDoc(residentDocRef);
 
-        // Log this action
-        await addLog(residentId, resName, null, 'Resident', 'move-out', 1, new Date());
+        // Log this action in Audit Trail
+        await addAuditEntry('resident-removed', {
+            residentId,
+            residentName
+        });
     };
 
-    // Delete log (owner only)
+    // Update log (Usage History only - but Audit the edit)
+    const updateLog = async (logId, updates) => {
+        if (!permissions?.canEdit) return;
+
+        const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
+        await updateDoc(logRef, {
+            ...updates,
+            updatedAt: serverTimestamp(),
+            updatedBy: user?.uid
+        });
+
+        // Audit the fact that a history entry was modified
+        await addAuditEntry('usage-log-edited', {
+            logId,
+            fieldsModified: Object.keys(updates)
+        });
+    };
+
+    // Delete log (Usage History only - but Audit the deletion)
     const deleteLog = async (logId) => {
-        if (!permissions?.canDelete) {
-            console.warn('Permission denied');
-            return;
-        }
+        if (!permissions?.canDelete) return;
 
-        const logDocRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
-        await deleteDoc(logDocRef);
-    };
+        const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
+        await deleteDoc(logRef);
 
-    // Restock item (with permission check)
-    // Signature matches AdminPanel handleRestock: onRestock(itemId, itemName, qty, resId, resName, date)
-    const restockItem = async (itemId, itemName, quantity, resId, resName, date) => {
-        if (!permissions?.canEdit) {
-            console.warn('Permission denied');
-            return;
-        }
-
-        // Call addLog which handles both logging and stock update
-        await addLog(resId, resName, itemId, itemName, 'restocked', quantity, date);
+        // Audit the fact that a history entry was DELETED
+        await addAuditEntry('usage-log-deleted', {
+            logId
+        });
     };
 
     return {
         items,
         residents,
         logs,
+        auditLogs,
         loading,
         error,
         isDemo,
         addLog,
+        updateLog,
+        deleteLog,
         addItem,
         updateItem,
         removeItem,
         addResident,
         updateResident,
         removeResident,
-        deleteLog,
         restockItem
     };
 }

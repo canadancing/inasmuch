@@ -115,10 +115,11 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                     />
                 ) : currentView === 'admin' ? (
                     <AdminView
-                        items={items}
                         residents={residents}
+                        items={items}
                         logs={logs}
-                        // Item props
+                        auditLogs={auditLogs}
+                        users={users} // Item props
                         onAddItem={addItem}
                         onUpdateItem={updateItem}
                         onDeleteItem={deleteItem}

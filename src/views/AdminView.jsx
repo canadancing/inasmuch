@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import HistoryLog from '../components/HistoryLog';
+import AuditLog from '../components/AuditLog';
 import AdminPanel from '../components/AdminPanel';
 import Statistics from '../components/Statistics';
 import PermissionsManager from '../components/PermissionsManager';
@@ -8,6 +9,7 @@ export default function AdminView({
     residents,
     items,
     logs,
+    auditLogs,
     users,
     loading,
     isDemo,
@@ -46,16 +48,17 @@ export default function AdminView({
     onRequestAdminAccess,
     onUpdateUserRole
 }) {
-    const [activeTab, setActiveTab] = useState('history');
+    const [activeTab, setActiveTab] = useState('usage');
 
     const tabs = [
         { id: 'stats', label: 'Stats', icon: '📊' },
-        { id: 'history', label: 'History', icon: '📋' },
+        { id: 'usage', label: 'Usage', icon: '📋' },
+        { id: 'audit', label: 'Audit', icon: '🛡️' },
         { id: 'manage', label: 'Manage', icon: '⚙️' },
     ];
 
     if (isSuperAdmin) {
-        tabs.push({ id: 'permissions', label: 'Access', icon: '🛡️' });
+        tabs.push({ id: 'permissions', label: 'Access', icon: '🔑' });
     }
 
     // Role-based access control for tabs - Check inventory permissions!
@@ -71,7 +74,7 @@ export default function AdminView({
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${activeTab === tab.id
-                            ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                            ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm scale-[1.02]'
                             : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
@@ -86,7 +89,7 @@ export default function AdminView({
                 <Statistics logs={logs} items={items} residents={residents} />
             )}
 
-            {activeTab === 'history' && (
+            {activeTab === 'usage' && (
                 <HistoryLog
                     logs={logs}
                     loading={loading}
@@ -94,6 +97,13 @@ export default function AdminView({
                     onUpdateLog={onUpdateLog}
                     residents={residents}
                     items={items}
+                />
+            )}
+
+            {activeTab === 'audit' && (
+                <AuditLog
+                    logs={auditLogs}
+                    loading={loading}
                 />
             )}
 

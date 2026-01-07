@@ -114,6 +114,22 @@ service cloud.firestore {
       }
     }
     
+      // ============================================
+      // AUDIT SUBCOLLECTION (Immutable)
+      // ============================================
+      
+      match /audit/{auditId} {
+        // Can read if: have view access to inventory
+        allow read: if hasViewAccess(inventoryId);
+        
+        // Can create if: have edit access
+        allow create: if hasEditAccess(inventoryId);
+        
+        // Immutable: No updates or deletes allowed for anyone
+        allow update, delete: if false;
+      }
+    }
+    
     // ============================================
     // ACCESS REQUESTS COLLECTION
     // ============================================
