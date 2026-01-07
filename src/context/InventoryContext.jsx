@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
@@ -12,7 +12,7 @@ export function InventoryProvider({ children, user }) {
     const [permissions, setPermissions] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Load user's inventories (owned only for now - collaboration will be added later)
+    // Load user's inventories (owned + collaborated)
     useEffect(() => {
         if (!user) {
             setInventories([]);
@@ -25,41 +25,58 @@ export function InventoryProvider({ children, user }) {
 
         setLoading(true);
 
-        try {
-            // For now, just fetch inventories owned by user
-            // Collaborated inventories will be added when we implement access requests
-            const inventoriesRef = collection(db, 'inventories');
-            const q = query(inventoriesRef, where('ownerId', '==', user.uid));
+        const loadInventories = async () => {
+            try {
+                // Get owned inventories
+                const ownedRef = collection(db, 'inventories');
+                const ownedQuery = query(ownedRef, where('ownerId', '==', user.uid));
+                const ownedSnapshot = await getDocs(ownedQuery);
+                const ownedInventories = ownedSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    isOwner: true
+                }));
 
-            const unsubscribe = onSnapshot(q,
-                (snapshot) => {
-                    const inventoryList = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
+                // Get all inventories to find ones where user is a collaborator
+                const allRef = collection(db, 'inventories');
+                const allSnapshot = await getDocs(allRef);
+                const collaboratedInventories = allSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(inv => inv.collaborators && inv.collaborators[user.uid])
+                    .map(inv => ({ ...inv, isOwner: false }));
 
-                    setInventories(inventoryList);
+                // Combine both lists
+                const allInventories = [...ownedInventories, ...collaboratedInventories];
+                setInventories(allInventories);
 
-                    // Auto-select first inventory if none selected
-                    if (!currentInventoryId && inventoryList.length > 0) {
-                        const savedInventoryId = localStorage.getItem('currentInventoryId');
-                        const inventoryToSelect = inventoryList.find(inv => inv.id === savedInventoryId) || inventoryList[0];
-                        setCurrentInventoryId(inventoryToSelect.id);
-                    }
-
-                    setLoading(false);
-                },
-                (error) => {
-                    console.error('Error loading inventories:', error);
-                    setLoading(false);
+                // Auto-select first inventory if none selected
+                if (!currentInventoryId && allInventories.length > 0) {
+                    const savedInventoryId = localStorage.getItem('currentInventoryId');
+                    const inventoryToSelect = allInventories.find(inv => inv.id === savedInventoryId) || allInventories[0];
+                    setCurrentInventoryId(inventoryToSelect.id);
                 }
-            );
 
-            return () => unsubscribe();
-        } catch (error) {
-            console.error('Error setting up inventory listener:', error);
-            setLoading(false);
-        }
+                setLoading(false);
+            } catch (error) {
+                console.error('Error loading inventories:', error);
+                setLoading(false);
+            }
+        };
+
+        loadInventories();
+
+        // Set up real-time listener for owned inventories
+        const inventoriesRef = collection(db, 'inventories');
+        const q = query(inventoriesRef, where('ownerId', '==', user.uid));
+
+        const unsubscribe = onSnapshot(q, () => {
+            // Reload when changes detected
+            loadInventories();
+        }, (error) => {
+            console.error('Error in inventory listener:', error);
+        });
+
+        return () => unsubscribe();
     }, [user, currentInventoryId]);
 
     // Update current inventory when selection changes
