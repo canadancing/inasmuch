@@ -61,12 +61,14 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
+    const [showRestockModal, setShowRestockModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeContext, setUpgradeContext] = useState(null);
 
     const navItems = [
         { id: 'stock', label: 'STOCK', icon: '📦' },
-        { id: 'log', label: 'LOG', icon: '✏️', isAction: true },
+        { id: 'log', label: 'LOG', icon: '➖', isAction: true }, // Minus sign for removing items
+        { id: 'restock', label: 'RESTOCK', icon: '➕', isAction: true }, // Plus sign for adding items
         { id: 'admin', label: 'ADMIN', icon: '⚙️' },
         { id: 'account', label: 'ACCOUNT', icon: '👤' },
     ];
@@ -187,10 +189,23 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                 key={item.id}
                                 onClick={() => {
                                     if (item.isAction) {
+                                        // LOG or RESTOCK action
                                         if (!user) {
                                             loginWithGoogle();
-                                        } else if (isAdmin || inventoryPermissions?.canEdit) {
-                                            setShowLogModal(true);
+                                        } else if (item.id === 'log') {
+                                            if (inventoryPermissions?.canEdit) {
+                                                setShowLogModal(true);
+                                            } else if (inventoryPermissions?.canView) {
+                                                setUpgradeContext({ action: 'LOG' });
+                                                setShowUpgradeModal(true);
+                                            }
+                                        } else if (item.id === 'restock') {
+                                            if (inventoryPermissions?.canEdit) {
+                                                setShowRestockModal(true);
+                                            } else if (inventoryPermissions?.canView) {
+                                                setUpgradeContext({ action: 'RESTOCK' });
+                                                setShowUpgradeModal(true);
+                                            }
                                         }
                                     } else {
                                         setCurrentView(item.id);

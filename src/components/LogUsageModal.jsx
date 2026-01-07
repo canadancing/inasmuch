@@ -132,9 +132,9 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 placeholder="Search residents..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
-                            {showResidentDropdown && filteredResidents.length > 0 && (
+                            {showResidentDropdown && (
                                 <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                                    {filteredResidents.map((resident) => (
+                                    {filteredResidents.length > 0 ? filteredResidents.map((resident) => (
                                         <button
                                             key={resident.id}
                                             onClick={() => {
@@ -153,7 +153,17 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                                 </div>
                                             </div>
                                         </button>
-                                    ))}
+                                    )) : (
+                                        <div className="p-6 text-center">
+                                            <div className="text-3xl mb-2">👤</div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                No residents found
+                                            </p>
+                                            <p className="text-xs text-primary-500 dark:text-primary-400">
+                                                💡 Add residents in the <strong>ADMIN → Manage</strong> tab
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -194,9 +204,9 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 placeholder="Search items..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
-                            {showItemDropdown && filteredItems.length > 0 && (
+                            {showItemDropdown && (
                                 <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                                    {filteredItems.map((item) => (
+                                    {filteredItems.length > 0 ? filteredItems.map((item) => (
                                         <button
                                             key={item.id}
                                             onClick={() => handleAddItem(item)}
@@ -212,7 +222,17 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                                 </div>
                                             </div>
                                         </button>
-                                    ))}
+                                    )) : (
+                                        <div className="p-6 text-center">
+                                            <div className="text-3xl mb-2">📦</div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                No items found
+                                            </p>
+                                            <p className="text-xs text-primary-500 dark:text-primary-400">
+                                                💡 Add items in the <strong>ADMIN → Manage</strong> tab
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
