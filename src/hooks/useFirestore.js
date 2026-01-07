@@ -153,7 +153,6 @@ export function useFirestore(user) {
     };
 
     // Add item (with permission check)
-    // Signature matches AdminPanel: onAddItem(name, icon)
     const addItem = async (name, icon) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
@@ -161,7 +160,7 @@ export function useFirestore(user) {
         }
 
         const itemsRef = collection(db, 'inventories', currentInventoryId, 'items');
-        await addDoc(itemsRef, {
+        const docRef = await addDoc(itemsRef, {
             name,
             icon,
             currentStock: 0,
@@ -171,6 +170,9 @@ export function useFirestore(user) {
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
+
+        // Log this action
+        await addLog(null, 'Admin', docRef.id, name, 'created-item', 1, new Date());
     };
 
     // Update item (with permission check)
@@ -186,6 +188,10 @@ export function useFirestore(user) {
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
+
+        // Log this action
+        const itemName = updates.name || items.find(i => i.id === itemId)?.name || 'Item';
+        await addLog(null, 'Admin', itemId, itemName, 'updated-item', 0, new Date());
     };
 
     // Delete item (owner only)
@@ -195,8 +201,12 @@ export function useFirestore(user) {
             return;
         }
 
+        const itemName = items.find(i => i.id === itemId)?.name || 'Item';
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
         await deleteDoc(itemDocRef);
+
+        // Log this action
+        await addLog(null, 'Admin', itemId, itemName, 'deleted-item', 0, new Date());
     };
 
     // Add resident (with permission check)
@@ -207,13 +217,17 @@ export function useFirestore(user) {
         }
 
         const residentsRef = collection(db, 'inventories', currentInventoryId, 'residents');
-        await addDoc(residentsRef, {
+        const docRef = await addDoc(residentsRef, {
             ...residentData,
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
+
+        // Log this action
+        const resName = `${residentData.firstName} ${residentData.lastName}`.trim();
+        await addLog(docRef.id, resName, null, 'Resident', 'move-in', 1, new Date());
     };
 
     // Update resident (with permission check)
@@ -229,6 +243,10 @@ export function useFirestore(user) {
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
+
+        // Log this action
+        const resName = updates.firstName ? `${updates.firstName} ${updates.lastName || ''}`.trim() : (residents.find(r => r.id === residentId)?.firstName || 'Resident');
+        await addLog(residentId, resName, null, 'Resident', 'updated-resident', 0, new Date());
     };
 
     // Delete resident (owner only)
@@ -238,8 +256,13 @@ export function useFirestore(user) {
             return;
         }
 
+        const res = residents.find(r => r.id === residentId);
+        const resName = res ? `${res.firstName} ${res.lastName}`.trim() : 'Resident';
         const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
         await deleteDoc(residentDocRef);
+
+        // Log this action
+        await addLog(residentId, resName, null, 'Resident', 'move-out', 1, new Date());
     };
 
     // Delete log (owner only)

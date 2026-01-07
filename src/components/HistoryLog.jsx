@@ -12,7 +12,8 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
     const formatDate = (date) => {
         if (!date) return 'Unknown';
-        const d = new Date(date);
+        // Handle Firestore Timestamp or JS Date
+        const d = date?.toDate ? date.toDate() : new Date(date);
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -24,9 +25,13 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
             used: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
             restocked: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
             'move-in': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-            'move-out': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+            'move-out': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+            'created-item': 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
+            'updated-item': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'deleted-item': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+            'updated-resident': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
         };
-        return styles[action] || styles.used;
+        return styles[action] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     };
 
     const getActionIcon = (action) => {
@@ -35,12 +40,16 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
             case 'restocked': return '📦';
             case 'move-in': return '🏠';
             case 'move-out': return '👋';
+            case 'created-item': return '✨';
+            case 'updated-item': return '📝';
+            case 'deleted-item': return '🗑️';
+            case 'updated-resident': return '👤';
             default: return '📋';
         }
     };
 
     const handleEdit = (log) => {
-        const logDate = log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp);
+        const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
         const dateStr = logDate.toISOString().split('T')[0];
         setEditForm({
             id: log.id,
@@ -55,15 +64,15 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
         const [year, month, day] = editForm.date.split('-').map(Number);
         const newDate = new Date(year, month - 1, day);
 
-        // Preserve original time if possible, or set to noon
-        const originalTime = log.timestamp instanceof Date ? log.timestamp : new Date(log.timestamp);
+        // Preserve original time if possible
+        const originalTime = log.date?.toDate ? log.date.toDate() : new Date(log.date);
         newDate.setHours(originalTime.getHours(), originalTime.getMinutes(), originalTime.getSeconds());
 
         await onUpdateLog(log.id, {
             quantity: editForm.quantity,
             residentId: editForm.residentId,
             residentName: editForm.residentName,
-            timestamp: newDate
+            date: newDate
         });
         setEditForm(prev => ({ ...prev, id: null }));
     };
@@ -213,21 +222,21 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-semibold text-gray-900 dark:text-white">
-                                        {log.residentName}
+                                        {log.residentName === 'Admin' ? 'Management' : log.residentName}
                                     </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getActionBadge(log.action)}`}>
-                                        {log.action}
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${getActionBadge(log.action)}`}>
+                                        {log.action.replace('-', ' ')}
                                     </span>
                                 </div>
                                 <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                                    {log.quantity}× {log.itemName}
+                                    {log.quantity > 0 ? `${log.quantity}× ` : ''}{log.itemName}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-2">
-                                    <span>{formatDate(log.timestamp)}</span>
-                                    {log.performedBy && (
+                                    <span>{formatDate(log.date)}</span>
+                                    {log.performedByName && (
                                         <>
                                             <span className="opacity-30">•</span>
-                                            <span className="italic truncate max-w-[120px]" title={log.performedBy}>by {log.performedBy}</span>
+                                            <span className="italic truncate max-w-[150px]">by {log.performedByName}</span>
                                         </>
                                     )}
                                 </p>
