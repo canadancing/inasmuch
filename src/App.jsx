@@ -134,6 +134,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
                         user={user}
                         isAdmin={isAdmin}
                         role={role}
+                        permissions={permissions}
                         onRequestAdminAccess={requestAdminAccess}
                     />
                 ) : currentView === 'account' ? (
