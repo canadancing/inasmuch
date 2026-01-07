@@ -16,6 +16,7 @@ import {
     setPersistence,
     browserLocalPersistence
 } from 'firebase/auth';
+import { generateUniqueUserId, generateInventoryId } from '../firebase/userIdUtils';
 
 export function useAuth() {
     const [user, setUser] = useState(null);
@@ -73,15 +74,29 @@ export function useAuth() {
 
                         // If user doesn't exist in Firestore, create them
                         if (!userDoc.exists()) {
+                            // Generate unique user ID
+                            const userId = await generateUniqueUserId();
+
+                            // Create user document
                             await setDoc(userDocRef, {
                                 uid: firebaseUser.uid,
+                                userId: userId,
                                 email: firebaseUser.email,
                                 displayName: firebaseUser.displayName,
                                 photoURL: firebaseUser.photoURL,
-                                role: userRole,
-                                requestPending: false,
                                 createdAt: serverTimestamp(),
                                 lastLogin: serverTimestamp()
+                            });
+
+                            // Create default inventory for new user
+                            const inventoryId = generateInventoryId(firebaseUser.uid);
+                            await setDoc(doc(db, 'inventories', inventoryId), {
+                                id: inventoryId,
+                                ownerId: firebaseUser.uid,
+                                name: `${firebaseUser.displayName || 'My'} Inventory`,
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp(),
+                                collaborators: {}
                             });
                         } else {
                             // Update last login
