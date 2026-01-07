@@ -181,20 +181,17 @@ export default function App() {
                                         setCurrentView(item.id);
                                     }
                                 }}
-                                className={`flex flex-col items-center justify-center px-5 py-2 rounded-full transition-all duration-200 ${
-                                    isActive ? 'bg-primary-500/20' : 'hover:bg-gray-700/50'
-                                } ${item.isAction ? 'bg-gradient-to-br from-primary-500 to-accent-500 w-12 h-12 p-0 mx-1' : ''}`}
+                                className={`flex flex-col items-center justify-center px-5 py-2 rounded-full transition-all duration-200 ${isActive ? 'bg-primary-500/20' : 'hover:bg-gray-700/50'
+                                    } ${item.isAction ? 'bg-gradient-to-br from-primary-500 to-accent-500 w-12 h-12 p-0 mx-1' : ''}`}
                             >
                                 {item.isAction ? (
                                     <span className="text-3xl font-thin text-white">+</span>
                                 ) : (
                                     <>
-                                        <span className={`text-xl mb-0.5 transition-all ${
-                                            isActive ? 'scale-110' : 'opacity-70'
-                                        }`}>{item.icon}</span>
-                                        <span className={`text-[8px] font-semibold uppercase tracking-wider transition-all ${
-                                            isActive ? 'text-primary-400' : 'text-gray-400'
-                                        }`}>{item.label}</span>
+                                        <span className={`text-xl mb-0.5 transition-all ${isActive ? 'scale-110' : 'opacity-70'
+                                            }`}>{item.icon}</span>
+                                        <span className={`text-[8px] font-semibold uppercase tracking-wider transition-all ${isActive ? 'text-primary-400' : 'text-gray-400'
+                                            }`}>{item.label}</span>
                                     </>
                                 )}
                             </button>
@@ -202,8 +199,6 @@ export default function App() {
                     })}
                 </div>
             </nav>
-
-            </div>
 
             {/* Log Usage Modal */}
             <LogUsageModal
