@@ -94,19 +94,45 @@ export default function AuditLog({ logs, loading }) {
                                 </span>
                             </div>
 
-                            <div className="mt-1.5 text-sm text-gray-900 dark:text-white flex flex-wrap items-center gap-x-1">
-                                <span className="font-bold">{log.performedByName}</span>
-                                <span className="text-gray-500 dark:text-gray-400">performed</span>
-                                <span className="underline decoration-primary-500/30 underline-offset-2">{log.action.split('-').pop()}</span>
-                                {log.itemName && <span>on <span className="font-semibold">{log.itemName}</span></span>}
-                                {log.residentName && <span>for <span className="font-semibold">{log.residentName}</span></span>}
-                                {log.quantity > 0 && <span>({log.quantity})</span>}
+                            <div className="mt-1.5 text-sm text-gray-900 dark:text-white flex flex-wrap items-center gap-x-1 leading-relaxed">
+                                <span className="font-bold text-primary-600 dark:text-primary-400">{log.performedByName}</span>
+
+                                {log.action === 'usage-log-deleted' ? (
+                                    <>
+                                        <span className="text-gray-500 italic">deleted</span>
+                                        <span className="text-gray-500">a usage record for</span>
+                                        <span className="font-semibold">{log.residentName}</span>
+                                        <span className="text-gray-400">({log.itemName})</span>
+                                    </>
+                                ) : log.action === 'usage-log-edited' ? (
+                                    <>
+                                        <span className="text-gray-500 italic">edited</span>
+                                        <span className="text-gray-500">a usage record for</span>
+                                        <span className="font-semibold">{log.residentName}</span>
+                                        <span className="text-gray-400">({log.itemName})</span>
+                                        {log.newQuantity !== undefined && (
+                                            <span className="ml-1 text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 px-1.5 py-0.5 rounded-full font-bold">
+                                                {log.originalQuantity} → {log.newQuantity}
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-gray-500">performed</span>
+                                        <span className="underline decoration-primary-500/30 underline-offset-2 font-medium">
+                                            {log.action.split('-').pop()}
+                                        </span>
+                                        {log.itemName && <span>on <span className="font-semibold">{log.itemName}</span></span>}
+                                        {log.residentName && <span>for <span className="font-semibold">{log.residentName}</span></span>}
+                                        {log.quantity > 0 && <span>({log.quantity})</span>}
+                                    </>
+                                )}
                             </div>
 
-                            {log.updates && (
+                            {log.updates && log.action !== 'usage-log-edited' && (
                                 <div className="mt-1 flex gap-1 flex-wrap">
                                     {log.updates.map(field => (
-                                        <span key={field} className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1 rounded">
+                                        <span key={field} className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-400 px-1.5 rounded">
                                             {field}
                                         </span>
                                     ))}
@@ -114,8 +140,15 @@ export default function AuditLog({ logs, loading }) {
                             )}
 
                             {log.fieldsModified && (
-                                <div className="mt-1 text-[10px] text-orange-500">
-                                    Modified: {log.fieldsModified.join(', ')}
+                                <div className="mt-1.5 flex gap-1.5 items-center">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Changes:</span>
+                                    <div className="flex gap-1 flex-wrap">
+                                        {log.fieldsModified.map(field => (
+                                            <span key={field} className="text-[10px] text-orange-500 bg-orange-500/5 px-1.5 rounded border border-orange-500/10">
+                                                {field}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

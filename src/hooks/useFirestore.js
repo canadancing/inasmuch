@@ -375,6 +375,8 @@ export function useFirestore(user) {
         if (!permissions?.canEdit) return;
 
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
+        const logEntry = logs.find(l => l.id === logId);
+
         await updateDoc(logRef, {
             ...updates,
             updatedAt: serverTimestamp(),
@@ -384,6 +386,10 @@ export function useFirestore(user) {
         // Audit the fact that a history entry was modified
         await addAuditEntry('usage-log-edited', {
             logId,
+            itemName: logEntry?.itemName || 'Unknown',
+            residentName: logEntry?.residentName || 'Unknown',
+            originalQuantity: logEntry?.quantity,
+            newQuantity: updates.quantity,
             fieldsModified: Object.keys(updates)
         });
     };
@@ -393,11 +399,16 @@ export function useFirestore(user) {
         if (!permissions?.canDelete) return;
 
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
+        const logEntry = logs.find(l => l.id === logId);
+
         await deleteDoc(logRef);
 
         // Audit the fact that a history entry was DELETED
         await addAuditEntry('usage-log-deleted', {
-            logId
+            logId,
+            itemName: logEntry?.itemName || 'Unknown',
+            residentName: logEntry?.residentName || 'Unknown',
+            quantity: logEntry?.quantity
         });
     };
 
