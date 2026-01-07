@@ -107,7 +107,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                     <ResidentView
                         items={items}
                         residents={residents}
-                        onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date, user)}
+                        onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
                         customIcons={customIcons}
                         tags={tags}
                         getTagStyles={getTagStyles}
@@ -206,7 +206,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 onClose={() => setShowLogModal(false)}
                 residents={residents}
                 items={items}
-                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date, user)}
+                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
                 user={user}
             />
         </div>

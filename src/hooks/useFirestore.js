@@ -25,7 +25,7 @@ const demoResidents = [
     { id: '2', firstName: 'Jordan', lastName: 'Smith', room: 'Room 102' },
 ];
 
-export function useFirestore() {
+export function useFirestore(user) {
     // Get inventory context - but handle case where it might not be ready
     let currentInventoryId = null;
     let permissions = null;
@@ -114,7 +114,7 @@ export function useFirestore() {
     }, [currentInventoryId]);
 
     // Add log (with permission check)
-    const addLog = async (resId, resName, itemId, itemName, action, qty, date, user) => {
+    const addLog = async (resId, resName, itemId, itemName, action, qty, date) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied: You do not have edit access');
             return;
@@ -128,27 +128,33 @@ export function useFirestore() {
             itemName,
             action,
             quantity: parseInt(qty),
-            date: date.toISOString ? date : new Date(date),
+            date: date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date(date)),
             performedBy: user?.uid,
             performedByName: user?.displayName || 'Unknown'
         });
 
-        // Update item stock if "used"
-        if (action === 'used') {
-            const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
-            const item = items.find(i => i.id === itemId);
-            if (item) {
-                await updateDoc(itemDocRef, {
-                    currentStock: Math.max(0, item.currentStock - parseInt(qty)),
-                    updatedAt: serverTimestamp(),
-                    updatedBy: user?.uid
-                });
+        // Update item stock
+        const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
+        const item = items.find(i => i.id === itemId);
+        if (item) {
+            let newStock = item.currentStock;
+            if (action === 'used') {
+                newStock = Math.max(0, item.currentStock - parseInt(qty));
+            } else if (action === 'restocked') {
+                newStock = item.currentStock + parseInt(qty);
             }
+
+            await updateDoc(itemDocRef, {
+                currentStock: newStock,
+                updatedAt: serverTimestamp(),
+                updatedBy: user?.uid
+            });
         }
     };
 
     // Add item (with permission check)
-    const addItem = async (itemData, user) => {
+    // Signature matches AdminPanel: onAddItem(name, icon)
+    const addItem = async (name, icon) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
@@ -156,7 +162,10 @@ export function useFirestore() {
 
         const itemsRef = collection(db, 'inventories', currentInventoryId, 'items');
         await addDoc(itemsRef, {
-            ...itemData,
+            name,
+            icon,
+            currentStock: 0,
+            minStock: 0,
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
             updatedAt: serverTimestamp(),
@@ -165,7 +174,7 @@ export function useFirestore() {
     };
 
     // Update item (with permission check)
-    const updateItem = async (itemId, updates, user) => {
+    const updateItem = async (itemId, updates) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
@@ -191,7 +200,7 @@ export function useFirestore() {
     };
 
     // Add resident (with permission check)
-    const addResident = async (residentData, user) => {
+    const addResident = async (residentData) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
@@ -208,7 +217,7 @@ export function useFirestore() {
     };
 
     // Update resident (with permission check)
-    const updateResident = async (residentId, updates, user) => {
+    const updateResident = async (residentId, updates) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
@@ -245,22 +254,15 @@ export function useFirestore() {
     };
 
     // Restock item (with permission check)
-    const restockItem = async (itemId, quantity, user) => {
+    // Signature matches AdminPanel handleRestock: onRestock(itemId, itemName, qty, resId, resName, date)
+    const restockItem = async (itemId, itemName, quantity, resId, resName, date) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
         }
 
-        const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
-        const item = items.find(i => i.id === itemId);
-
-        if (item) {
-            await updateDoc(itemDocRef, {
-                currentStock: item.currentStock + parseInt(quantity),
-                updatedAt: serverTimestamp(),
-                updatedBy: user?.uid
-            });
-        }
+        // Call addLog which handles both logging and stock update
+        await addLog(resId, resName, itemId, itemName, 'restocked', quantity, date);
     };
 
     return {
