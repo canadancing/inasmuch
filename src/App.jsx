@@ -3,6 +3,7 @@ import { useTheme } from './hooks/useTheme';
 import { useFirestore } from './hooks/useFirestore';
 import { useCustomIcons } from './hooks/useCustomIcons';
 import { useTags } from './hooks/useTags';
+import { usePendingRequestsCount } from './hooks/usePendingRequestsCount';
 import ThemeToggle from './components/ThemeToggle';
 import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
@@ -51,6 +52,8 @@ export default function App({ user, role, loading: authLoading, loginWithGoogle,
         removeTag,
         getTagStyles
     } = useTags();
+
+    const pendingRequestsCount = usePendingRequestsCount(user);
 
     const [showLogModal, setShowLogModal] = useState(false);
 

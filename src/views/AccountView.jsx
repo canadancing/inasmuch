@@ -4,6 +4,7 @@ import { db } from '../firebase/config';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
 import CollaboratorManagement from '../components/CollaboratorManagement';
+import YourRequestsSection from '../components/YourRequestsSection';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -154,6 +155,9 @@ export default function AccountView({ user, onLogin, onLogout }) {
 
             {/* Pending Requests (for owners) */}
             <PendingRequestsSection user={user} />
+
+            {/* Your Sent Requests (for requesters) */}
+            <YourRequestsSection user={user} />
 
             {/* Manage Existing Collaborators (for owners) */}
             <CollaboratorManagement user={user} />
