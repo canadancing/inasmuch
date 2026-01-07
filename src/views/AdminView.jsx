@@ -4,6 +4,8 @@ import AuditLog from '../components/AuditLog';
 import AdminPanel from '../components/AdminPanel';
 import Statistics from '../components/Statistics';
 import PermissionsManager from '../components/PermissionsManager';
+import { useInventory } from '../context/InventoryContext';
+
 
 export default function AdminView({
     residents,
@@ -48,6 +50,7 @@ export default function AdminView({
     onRequestAdminAccess,
     onUpdateUserRole
 }) {
+    const { currentInventory } = useInventory();
     const [activeTab, setActiveTab] = useState('usage');
 
     const tabs = [

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function AuditLog({ logs, loading }) {
+export default function AuditLog({ logs, loading, currentInventory }) {
     const formatDate = (date) => {
         if (!date) return 'Unknown';
         const d = date?.toDate ? date.toDate() : new Date(date);
@@ -125,6 +125,11 @@ export default function AuditLog({ logs, loading }) {
                                         {log.itemName && <span>on <span className="font-semibold">{log.itemName}</span></span>}
                                         {log.residentName && <span>for <span className="font-semibold">{log.residentName}</span></span>}
                                         {log.quantity > 0 && <span>({log.quantity})</span>}
+                                        {currentInventory?.name && (
+                                            <span className="text-gray-400 text-xs">
+                                                in <span className="font-semibold text-gray-500">{currentInventory.name}</span>
+                                            </span>
+                                        )}
                                     </>
                                 )}
                             </div>
