@@ -3,13 +3,15 @@ import { useState } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function AccessRequestModal({ isOpen, onClose, targetUser, currentUser, onSuccess }) {
+export default function AccessRequestModal({ isOpen, onClose, targetUser, currentUser, onSuccess, currentInventoryId, currentInventoryName }) {
     const [permission, setPermission] = useState('view');
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async () => {
-        if (!targetUser || !currentUser) return;
+        if (!currentUser) return;
+        // If not an upgrade, we need a targetUser
+        if (!currentInventoryId && !targetUser) return;
 
         setIsSubmitting(true);
         try {
@@ -19,12 +21,15 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
                 requesterName: currentUser.displayName,
                 requesterPhoto: currentUser.photoURL,
                 requesterEmail: currentUser.email,
-                targetUserId: targetUser.uid,
-                targetUserName: targetUser.displayName,
+                targetUserId: targetUser?.uid || '', // Empty if it's an upgrade request for someone's inventory
+                targetUserName: targetUser?.displayName || '',
+                inventoryId: currentInventoryId || '',
+                inventoryName: currentInventoryName || '',
                 permission,
                 message: message.trim(),
                 status: 'pending',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                isUpgrade: !!currentInventoryId
             });
 
             // Success!
@@ -96,8 +101,8 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
                             <button
                                 onClick={() => setPermission('view')}
                                 className={`w-full p-4 rounded-xl border-2 transition-all text-left ${permission === 'view'
-                                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                     }`}
                             >
                                 <div className="flex items-center justify-between">
@@ -123,8 +128,8 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
                             <button
                                 onClick={() => setPermission('edit')}
                                 className={`w-full p-4 rounded-xl border-2 transition-all text-left ${permission === 'edit'
-                                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                     }`}
                             >
                                 <div className="flex items-center justify-between">

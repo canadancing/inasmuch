@@ -141,13 +141,33 @@ export default function AdminView({
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="text-6xl mb-4">🔒</div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Restricted Access</h3>
-                        <p className="text-gray-500 max-w-xs px-6">
+                        <p className="text-gray-500 max-w-xs px-6 mb-8">
                             Only the inventory owner or authorized editors can manage residents and items.
                         </p>
-                        {permissions?.userId && !permissions?.canEdit && !permissions?.isOwner && (
-                            <p className="text-xs text-primary-500 mt-4">
-                                Current Role: Observer (View Only)
-                            </p>
+
+                        {role === 'view' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                                <p className="text-sm font-medium text-primary-500">
+                                    Current Role: Observer (View Only)
+                                </p>
+                                <button
+                                    onClick={() => setShowRequestModal(true)}
+                                    className="btn btn-primary px-8 py-3 shadow-xl shadow-primary-500/20"
+                                >
+                                    Request Editor Access
+                                </button>
+
+                                <AccessRequestModal
+                                    isOpen={showRequestModal}
+                                    onClose={() => setShowRequestModal(false)}
+                                    currentUser={user}
+                                    currentInventoryId={permissions?.id}
+                                    currentInventoryName={permissions?.name}
+                                    onSuccess={() => {
+                                        alert('✅ Request for Editor access sent to the owner!');
+                                    }}
+                                />
+                            </div>
                         )}
                     </div>
                 )

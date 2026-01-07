@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { db } from './firebase/config';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import InventorySwitcher from './components/InventorySwitcher';
 import { useFirestore } from './hooks/useFirestore';
 import { useCustomIcons } from './hooks/useCustomIcons';
@@ -55,6 +57,34 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
+
+    // Notification Listener
+    useEffect(() => {
+        if (!user) return;
+
+        const notificationsRef = collection(db, 'notifications');
+        const q = query(
+            notificationsRef,
+            where('targetUid', '==', user.uid),
+            where('read', '==', false)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const notification = change.doc.data();
+
+                    // Show alert (Real-time feedback)
+                    alert(`📬 Notification: ${notification.message}`);
+
+                    // Mark as read immediately after alerting
+                    updateDoc(change.doc.ref, { read: true });
+                }
+            });
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     const navItems = [
         { id: 'stock', label: 'STOCK', icon: '📦' },

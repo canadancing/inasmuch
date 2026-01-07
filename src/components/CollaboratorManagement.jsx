@@ -1,6 +1,5 @@
-// Component for managing collaborators (for inventory owners)
 import { useState } from 'react';
-import { doc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, updateDoc, deleteField, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useInventory } from '../context/InventoryContext';
 
@@ -29,6 +28,19 @@ export default function CollaboratorManagement({ user }) {
             await updateDoc(inventoryRef, {
                 [`collaborators.${collaboratorUid}.permission`]: newPermission
             });
+
+            // Send notification
+            await addDoc(collection(db, 'notifications'), {
+                targetUid: collaboratorUid,
+                type: 'permission_change',
+                newPermission,
+                inventoryName: currentInventory.name,
+                inventoryId: currentInventory.id,
+                message: `Your access to "${currentInventory.name}" has been changed to ${newPermission}.`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
             alert(`✅ Updated to ${newPermission} access`);
         } catch (error) {
             console.error('Error updating permission:', error);
@@ -49,6 +61,17 @@ export default function CollaboratorManagement({ user }) {
             await updateDoc(inventoryRef, {
                 [`collaborators.${collaboratorUid}`]: deleteField()
             });
+
+            // Send notification
+            await addDoc(collection(db, 'notifications'), {
+                targetUid: collaboratorUid,
+                type: 'access_revoked',
+                inventoryName: currentInventory.name,
+                message: `Your access to "${currentInventory.name}" has been revoked.`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
             alert('✅ Access revoked');
         } catch (error) {
             console.error('Error revoking access:', error);
@@ -80,8 +103,8 @@ export default function CollaboratorManagement({ user }) {
                                 </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${collaborator.permission === 'edit'
-                                    ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
-                                    : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                                ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
+                                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
                                 }`}>
                                 {collaborator.permission === 'edit' ? '✏️ Editor' : '👁️ Viewer'}
                             </span>
