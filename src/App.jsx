@@ -9,6 +9,7 @@ import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
 import { useAuth } from './hooks/useAuth';
+import { InventoryProvider } from './context/InventoryContext';
 
 export default function App() {
     const [currentView, setCurrentView] = useState('stock');

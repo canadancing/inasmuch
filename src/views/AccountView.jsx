@@ -1,18 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
-export default function AccountView({ user, role, onLogin, onLogout, requestAdminAccess, isDark }) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [requestSent, setRequestSent] = useState(false);
+export default function AccountView({ user, onLogin, onLogout }) {
+    const [userProfile, setUserProfile] = useState(null);
+    const [searchId, setSearchId] = useState('');
+    const [searchResult, setSearchResult] = useState(null);
+    const [searching, setSearching] = useState(false);
+    const [copied, setCopied] = useState(false);
 
-    const handleRequestAdmin = async () => {
-        setIsSubmitting(true);
+    // Fetch user profile with userId
+    useEffect(() => {
+        if (user) {
+            const fetchProfile = async () => {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('uid', '==', user.uid));
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    setUserProfile(snapshot.docs[0].data());
+                }
+            };
+            fetchProfile();
+        }
+    }, [user]);
+
+    const handleCopyId = async () => {
+        if (userProfile?.userId) {
+            await navigator.clipboard.writeText(userProfile.userId);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleSearch = async () => {
+        if (!searchId || searchId.length !== 6) return;
+
+        setSearching(true);
         try {
-            await requestAdminAccess();
-            setRequestSent(true);
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('userId', '==', searchId));
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                const foundUser = snapshot.docs[0].data();
+                setSearchResult({
+                    uid: foundUser.uid,
+                    userId: foundUser.userId,
+                    displayName: foundUser.displayName,
+                    photoURL: foundUser.photoURL
+                });
+            } else {
+                setSearchResult('not_found');
+            }
         } catch (error) {
-            console.error('Error requesting admin:', error);
+            console.error('Search error:', error);
         } finally {
-            setIsSubmitting(false);
+            setSearching(false);
         }
     };
 
@@ -26,7 +69,7 @@ export default function AccountView({ user, role, onLogin, onLogout, requestAdmi
                 </div>
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Welcome to Inasmuch</h2>
                 <p className="text-gray-500 dark:text-gray-400 mb-10 max-w-xs mx-auto">
-                    Sign in with your Google account to log usage, manage supplies, and customize your experience.
+                    Sign in to manage your inventory and collaborate with others.
                 </p>
                 <button
                     onClick={onLogin}
@@ -45,101 +88,116 @@ export default function AccountView({ user, role, onLogin, onLogout, requestAdmi
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-            {/* Profile Card */}
-            <div className="card p-8 text-center relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-400 via-accent-500 to-primary-600 opacity-50" />
-
-                <div className="relative z-10">
-                    <div className="inline-block relative mb-6">
-                        <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-blue-500 via-red-500 to-green-500 shadow-xl transition-transform group-hover:scale-105">
-                            <div className="w-full h-full rounded-full border-4 border-white dark:border-gray-900 overflow-hidden bg-gray-100 dark:bg-gray-800">
-                                {user.photoURL ? (
-                                    <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
-                                        {user.displayName?.charAt(0) || user.email?.charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-md flex items-center justify-center border border-gray-100 dark:border-gray-700">
-                            <span className="text-lg">✨</span>
-                        </div>
+        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+            {/* Profile Card with User ID */}
+            <div className="card p-6">
+                <div className="flex items-center gap-4 mb-6">
+                    <img
+                        src={user.photoURL}
+                        alt={user.displayName}
+                        className="w-20 h-20 rounded-2xl shadow-lg"
+                    />
+                    <div className="flex-1">
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+                            {user.displayName}
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {user.email}
+                        </p>
                     </div>
+                </div>
 
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{user.displayName || 'Anonymous User'}</h2>
-                    <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">{user.email}</p>
-
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                        <span className={`w-2 h-2 rounded-full ${role === 'super-admin' ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : role === 'admin' ? 'bg-primary-500' : 'bg-gray-400'}`} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 dark:text-gray-300">
-                            {role || 'Viewer'}
+                {/* Your User ID */}
+                <div className="bg-gradient-to-br from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-2xl p-6 border border-primary-100 dark:border-primary-800">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                            Your ID
                         </span>
+                        <button
+                            onClick={handleCopyId}
+                            className="px-3 py-1 rounded-lg bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-700 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                        >
+                            {copied ? '✓ Copied' : '📋 Copy'}
+                        </button>
                     </div>
+                    <div className="text-4xl font-black text-primary-600 dark:text-primary-400 tracking-wider font-mono">
+                        {userProfile?.userId || '------'}
+                    </div>
+                    <p className="text-xs text-primary-600/70 dark:text-primary-400/70 mt-2">
+                        Share this ID with others to collaborate
+                    </p>
                 </div>
             </div>
 
-            {/* Role & Permissions Section */}
-            {role !== 'super-admin' && role !== 'admin' && (
-                <div className="card p-6 border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/5">
-                    <div className="flex items-start gap-4">
-                        <div className="text-3xl">🛡️</div>
-                        <div className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Upgrade your account</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                                Apply to become a Co-Admin to help manage residents, items, and log supply usage.
-                            </p>
-                            <button
-                                onClick={handleRequestAdmin}
-                                disabled={requestSent || isSubmitting}
-                                className={`btn w-full ${requestSent
-                                    ? 'bg-emerald-500 text-white shadow-emerald-500/20'
-                                    : 'btn-primary shadow-primary-500/20'
-                                    } shadow-lg`}
-                            >
-                                {isSubmitting ? (
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                ) : requestSent ? (
-                                    'Application Sent! ✓'
-                                ) : (
-                                    'Apply for Co-Admin'
-                                )}
+            {/* Find Users */}
+            <div className="card p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                    Find Users
+                </h3>
+                <div className="flex gap-2 mb-4">
+                    <input
+                        type="text"
+                        value={searchId}
+                        onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setSearchId(value);
+                            setSearchResult(null);
+                        }}
+                        placeholder="Enter 6-digit ID"
+                        maxLength={6}
+                        className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-lg focus:border-primary-500 focus:ring-0 transition-colors"
+                    />
+                    <button
+                        onClick={handleSearch}
+                        disabled={searchId.length !== 6 || searching}
+                        className="px-6 py-3 rounded-xl bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        {searching ? 'Searching...' : 'Search'}
+                    </button>
+                </div>
+
+                {/* Search Results */}
+                {searchResult && searchResult !== 'not_found' && (
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={searchResult.photoURL}
+                                alt={searchResult.displayName}
+                                className="w-12 h-12 rounded-xl"
+                            />
+                            <div className="flex-1">
+                                <div className="font-semibold text-gray-900 dark:text-white">
+                                    {searchResult.displayName}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                                    ID: {searchResult.userId}
+                                </div>
+                            </div>
+                            <button className="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors">
+                                Request Access
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Actions Section */}
-            <div className="space-y-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-6">Account Settings</p>
-                <div className="card overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
-                    <button
-                        onClick={onLogout}
-                        className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 transition-transform group-hover:rotate-12">
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="font-bold text-gray-900 dark:text-white">Sign Out</p>
-                                <p className="text-xs text-gray-500">Sign out of your Inasmuch account</p>
-                            </div>
-                        </div>
-                        <svg className="w-5 h-5 text-gray-300 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </div>
+                {searchResult === 'not_found' && (
+                    <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center">
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                            No user found with ID: {searchId}
+                        </p>
+                    </div>
+                )}
             </div>
 
-            <p className="text-center text-[10px] text-gray-400 font-medium pb-8 uppercase tracking-widest">
-                Account secured by Firebase Authentication
-            </p>
+            {/* Sign Out */}
+            <div className="card p-6">
+                <button
+                    onClick={onLogout}
+                    className="w-full px-6 py-3 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                    Sign Out
+                </button>
+            </div>
         </div>
     );
 }
