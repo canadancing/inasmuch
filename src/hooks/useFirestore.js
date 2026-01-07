@@ -9,7 +9,6 @@ import {
     deleteDoc,
     doc,
     serverTimestamp,
-    getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useInventory } from '../context/InventoryContext';
@@ -27,7 +26,18 @@ const demoResidents = [
 ];
 
 export function useFirestore() {
-    const { currentInventoryId, permissions } = useInventory();
+    // Get inventory context - but handle case where it might not be ready
+    let currentInventoryId = null;
+    let permissions = null;
+
+    try {
+        const inventory = useInventory();
+        currentInventoryId = inventory.currentInventoryId;
+        permissions = inventory.permissions;
+    } catch (error) {
+        // Context not available yet, will use demo mode
+        console.log('InventoryContext not available, using demo mode');
+    }
 
     const [items, setItems] = useState([]);
     const [residents, setResidents] = useState([]);
@@ -106,7 +116,8 @@ export function useFirestore() {
     // Add log (with permission check)
     const addLog = async (resId, resName, itemId, itemName, action, qty, date, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied: You do not have edit access');
+            console.warn('Permission denied: You do not have edit access');
+            return;
         }
 
         const logsRef = collection(db, 'inventories', currentInventoryId, 'logs');
@@ -139,7 +150,8 @@ export function useFirestore() {
     // Add item (with permission check)
     const addItem = async (itemData, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const itemsRef = collection(db, 'inventories', currentInventoryId, 'items');
@@ -155,7 +167,8 @@ export function useFirestore() {
     // Update item (with permission check)
     const updateItem = async (itemId, updates, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
@@ -169,7 +182,8 @@ export function useFirestore() {
     // Delete item (owner only)
     const removeItem = async (itemId) => {
         if (!permissions?.canDelete) {
-            throw new Error('Permission denied: Only the owner can delete items');
+            console.warn('Permission denied: Only the owner can delete items');
+            return;
         }
 
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
@@ -179,7 +193,8 @@ export function useFirestore() {
     // Add resident (with permission check)
     const addResident = async (residentData, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const residentsRef = collection(db, 'inventories', currentInventoryId, 'residents');
@@ -195,7 +210,8 @@ export function useFirestore() {
     // Update resident (with permission check)
     const updateResident = async (residentId, updates, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
@@ -209,7 +225,8 @@ export function useFirestore() {
     // Delete resident (owner only)
     const removeResident = async (residentId) => {
         if (!permissions?.canDelete) {
-            throw new Error('Permission denied: Only the owner can delete residents');
+            console.warn('Permission denied: Only the owner can delete residents');
+            return;
         }
 
         const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
@@ -219,7 +236,8 @@ export function useFirestore() {
     // Delete log (owner only)
     const deleteLog = async (logId) => {
         if (!permissions?.canDelete) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const logDocRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
@@ -229,7 +247,8 @@ export function useFirestore() {
     // Restock item (with permission check)
     const restockItem = async (itemId, quantity, user) => {
         if (!permissions?.canEdit) {
-            throw new Error('Permission denied');
+            console.warn('Permission denied');
+            return;
         }
 
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
