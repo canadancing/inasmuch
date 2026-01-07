@@ -16,6 +16,7 @@ export default function DataManagement({ user }) {
         previewFile
     } = useBackup(currentInventoryId, currentInventory?.name, user);
 
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showLocalBackups, setShowLocalBackups] = useState(false);
     const [importPreview, setImportPreview] = useState(null);
@@ -53,7 +54,7 @@ export default function DataManagement({ user }) {
                 setShowImportModal(false);
                 setImportPreview(null);
                 setImportResult(null);
-                window.location.reload(); // Refresh to show imported data
+                window.location.reload();
             }, 2000);
         }
     };
@@ -85,99 +86,118 @@ export default function DataManagement({ user }) {
 
     return (
         <div className="space-y-4">
-            {/* Section Header */}
-            <div className="flex items-center justify-between">
+            {/* Section Header - Clickable to toggle */}
+            <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="w-full flex items-center justify-between group"
+            >
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <span>💾</span> Data Management
                 </h3>
-                {lastAutoBackup && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Auto-saved {formatTimeAgo(lastAutoBackup)}
-                    </span>
-                )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Export */}
-                <button
-                    onClick={handleExport}
-                    disabled={isExporting || !currentInventoryId}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors"
-                >
-                    {isExporting ? (
-                        <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Exporting...
-                        </>
-                    ) : (
-                        <>
-                            <span>📥</span> Export Backup
-                        </>
+                <div className="flex items-center gap-2">
+                    {lastAutoBackup && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                            Auto-saved {formatTimeAgo(lastAutoBackup)}
+                        </span>
                     )}
-                </button>
+                    <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </button>
 
-                {/* Import */}
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isImporting || !currentInventoryId}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors"
-                >
-                    <span>📤</span> Restore from File
-                </button>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                />
+            {/* Collapsible Content */}
+            {!isCollapsed && (
+                <div className="space-y-4 animate-fade-in">
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Export */}
+                        <button
+                            onClick={handleExport}
+                            disabled={isExporting || !currentInventoryId}
+                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors"
+                        >
+                            {isExporting ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <span>📥</span> Export Backup
+                                </>
+                            )}
+                        </button>
 
-                {/* Local Backups */}
-                <button
-                    onClick={() => setShowLocalBackups(!showLocalBackups)}
-                    disabled={!currentInventoryId}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold transition-colors"
-                >
-                    <span>🔄</span> Local Backups ({localBackups.length})
-                </button>
-            </div>
+                        {/* Import */}
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isImporting || !currentInventoryId}
+                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-semibold transition-colors"
+                        >
+                            <span>📤</span> Restore from File
+                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".json"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                        />
 
-            {/* Local Backups List */}
-            {showLocalBackups && (
-                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                        Auto-saved Backups (Browser Storage)
-                    </h4>
-                    {localBackups.length === 0 ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            No local backups yet. Backups are saved automatically every 5 minutes.
-                        </p>
-                    ) : (
-                        <div className="space-y-2">
-                            {localBackups.map((backup) => (
-                                <div
-                                    key={backup.id}
-                                    className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-700"
-                                >
-                                    <div>
-                                        <div className="font-medium text-gray-900 dark:text-white text-sm">
-                                            {formatDate(backup.timestamp)}
+                        {/* Local Backups */}
+                        <button
+                            onClick={() => setShowLocalBackups(!showLocalBackups)}
+                            disabled={!currentInventoryId}
+                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold transition-colors"
+                        >
+                            <span>🔄</span> Local Backups ({localBackups.length})
+                        </button>
+                    </div>
+
+                    {/* Local Backups List */}
+                    {showLocalBackups && (
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                                Auto-saved Backups (Browser Storage)
+                            </h4>
+                            {localBackups.length === 0 ? (
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    No local backups yet. Backups are saved automatically every 5 minutes.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {localBackups.map((backup) => (
+                                        <div
+                                            key={backup.id}
+                                            className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-gray-700"
+                                        >
+                                            <div>
+                                                <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                                    {formatDate(backup.timestamp)}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {backup.backup?.data?.items?.length || 0} items,{' '}
+                                                    {backup.backup?.data?.residents?.length || 0} residents
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRestoreLocal(backup.id)}
+                                                disabled={isImporting}
+                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                            >
+                                                Restore
+                                            </button>
                                         </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            {backup.backup?.data?.items?.length || 0} items,{' '}
-                                            {backup.backup?.data?.residents?.length || 0} residents
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleRestoreLocal(backup.id)}
-                                        disabled={isImporting}
-                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                                    >
-                                        Restore
-                                    </button>
+                                    ))}
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
                 </div>
@@ -195,7 +215,6 @@ export default function DataManagement({ user }) {
                             <>
                                 {importPreview.isValid ? (
                                     <div className="space-y-4">
-                                        {/* Backup Info */}
                                         <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
                                             <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                                                 <p><strong>Inventory:</strong> {importPreview.inventory?.name}</p>
@@ -204,7 +223,6 @@ export default function DataManagement({ user }) {
                                             </div>
                                         </div>
 
-                                        {/* Summary */}
                                         <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                                             <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
                                                 Will import:
@@ -217,7 +235,6 @@ export default function DataManagement({ user }) {
                                             </div>
                                         </div>
 
-                                        {/* Import Mode */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                 Import Mode
@@ -250,7 +267,6 @@ export default function DataManagement({ user }) {
                                             </div>
                                         </div>
 
-                                        {/* Result */}
                                         {importResult && (
                                             <div className={`p-3 rounded-lg ${importResult.success
                                                 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
@@ -278,7 +294,6 @@ export default function DataManagement({ user }) {
                             </>
                         )}
 
-                        {/* Actions */}
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => {
