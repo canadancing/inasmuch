@@ -8,13 +8,14 @@ export default function InventoryNicknameModal({ isOpen, onClose, inventory, onS
     const [saving, setSaving] = useState(false);
 
     const handleSave = async () => {
-        if (!inventory) return;
+        if (!inventory || !inventory.userId) return; // We need the current user's UID
 
         setSaving(true);
         try {
-            const inventoryRef = doc(db, 'inventories', inventory.id);
-            await updateDoc(inventoryRef, {
-                nickname: nickname.trim() || null,
+            // Save nickname to user's private document
+            const userRef = doc(db, 'users', inventory.userId);
+            await updateDoc(userRef, {
+                [`inventoryNicknames.${inventory.id}`]: nickname.trim() || null,
                 updatedAt: new Date()
             });
 

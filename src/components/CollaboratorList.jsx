@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc, deleteField, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export default function CollaboratorList({ user }) {
@@ -99,9 +99,35 @@ export default function CollaboratorList({ user }) {
     const handleUpdateRole = async (collab, newRole) => {
         try {
             const inventoryRef = doc(db, 'inventories', collab.inventoryId);
-            await updateDoc(inventoryRef, {
+            const batch = writeBatch(db);
+
+            // 1. Update inventory
+            batch.update(inventoryRef, {
                 [`collaborators.${collab.uid}.permission`]: newRole
             });
+
+            // 2. Add notification for the guest
+            const notificationsRef = collection(db, 'notifications');
+            const guestNotifRef = doc(notificationsRef);
+            batch.set(guestNotifRef, {
+                targetUid: collab.uid,
+                type: 'role_changed',
+                message: `${user.displayName} updated your access to ${newRole === 'edit' ? '✏️ Edit' : '👁️ View'}.`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            // 3. Add notification for the owner (activity log)
+            const ownerNotifRef = doc(notificationsRef);
+            batch.set(ownerNotifRef, {
+                targetUid: user.uid,
+                type: 'permission_update',
+                message: `You updated ${collab.displayName}'s access to ${newRole === 'edit' ? '✏️ Edit' : '👁️ View'}.`,
+                read: true, // Activity log starts as read
+                createdAt: serverTimestamp()
+            });
+
+            await batch.commit();
             alert(`Updated ${collab.displayName}'s access to ${newRole}`);
         } catch (error) {
             console.error("Error updating role:", error);
@@ -113,9 +139,52 @@ export default function CollaboratorList({ user }) {
         if (!confirm(`Remove ${collab.displayName}'s access to your inventory?`)) return;
         try {
             const inventoryRef = doc(db, 'inventories', collab.inventoryId);
+
+            // 1. Remove from inventory document
             await updateDoc(inventoryRef, {
                 [`collaborators.${collab.uid}`]: deleteField()
             });
+
+            // 2. Find and revoke the access request document
+            const requestsRef = collection(db, 'accessRequests');
+            const q = query(
+                requestsRef,
+                where('requesterId', '==', collab.uid),
+                where('targetUserId', '==', user.uid),
+                where('status', '==', 'approved')
+            );
+            const requestSnap = await getDocs(q);
+
+            const batch = writeBatch(db);
+            requestSnap.forEach(requestDoc => {
+                batch.update(requestDoc.ref, {
+                    status: 'revoked',
+                    revokedAt: serverTimestamp()
+                });
+            });
+
+            // 3. Add notification for the guest
+            const notificationsRef = collection(db, 'notifications');
+            const guestNotifRef = doc(notificationsRef);
+            batch.set(guestNotifRef, {
+                targetUid: collab.uid,
+                type: 'access_revoked',
+                message: `${user.displayName} has removed your access to their inventory.`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            // 4. Add notification for the owner (activity log)
+            const ownerNotifRef = doc(notificationsRef);
+            batch.set(ownerNotifRef, {
+                targetUid: user.uid,
+                type: 'collaborator_removed',
+                message: `You removed ${collab.displayName}'s access to your inventory.`,
+                read: true,
+                createdAt: serverTimestamp()
+            });
+
+            await batch.commit();
             alert(`Removed ${collab.displayName}'s access`);
         } catch (error) {
             console.error("Error removing collaborator:", error);

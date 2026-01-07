@@ -33,6 +33,16 @@ export default function YourRequestsSection({ user }) {
         return () => unsubscribe();
     }, [user]);
 
+    const deleteRequest = async (id, e) => {
+        e.stopPropagation();
+        try {
+            const { doc, deleteDoc } = await import('firebase/firestore');
+            await deleteDoc(doc(db, 'accessRequests', id));
+        } catch (error) {
+            console.error('Error deleting request:', error);
+        }
+    };
+
     if (!user || requests.length === 0) {
         return null;
     }
@@ -62,7 +72,7 @@ export default function YourRequestsSection({ user }) {
                     return (
                         <div
                             key={request.id}
-                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                            className="group p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 relative"
                         >
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
@@ -73,9 +83,22 @@ export default function YourRequestsSection({ user }) {
                                         {request.permission === 'edit' ? '✏️ Edit' : '👁️ View'} access
                                     </div>
                                 </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.color}`}>
-                                    {badge.label}
-                                </span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.color}`}>
+                                        {badge.label}
+                                    </span>
+                                    {request.status !== 'pending' && (
+                                        <button
+                                            onClick={(e) => deleteRequest(request.id, e)}
+                                            className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            title="Clear entry"
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {request.message && (

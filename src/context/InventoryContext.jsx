@@ -27,23 +27,34 @@ export function InventoryProvider({ children, user }) {
 
         const loadInventories = async () => {
             try {
-                // Get owned inventories
+                // 1. Get user nicknames
+                const userRef = doc(db, 'users', user.uid);
+                const userSnapshot = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
+                const userData = userSnapshot.empty ? {} : userSnapshot.docs[0].data();
+                const nicknames = userData.inventoryNicknames || {};
+
+                // 2. Get owned inventories
                 const ownedRef = collection(db, 'inventories');
                 const ownedQuery = query(ownedRef, where('ownerId', '==', user.uid));
                 const ownedSnapshot = await getDocs(ownedQuery);
                 const ownedInventories = ownedSnapshot.docs.map(doc => ({
                     ...doc.data(),
                     id: doc.id,
-                    isOwner: true
+                    isOwner: true,
+                    nickname: nicknames[doc.id] || null
                 }));
 
-                // Get all inventories to find ones where user is a collaborator
+                // 3. Get all inventories to find ones where user is a collaborator
                 const allRef = collection(db, 'inventories');
                 const allSnapshot = await getDocs(allRef);
                 const collaboratedInventories = allSnapshot.docs
                     .map(doc => ({ ...doc.data(), id: doc.id }))
                     .filter(inv => inv.collaborators && inv.collaborators[user.uid])
-                    .map(inv => ({ ...inv, isOwner: false }));
+                    .map(inv => ({
+                        ...inv,
+                        isOwner: false,
+                        nickname: nicknames[inv.id] || null
+                    }));
 
                 // Combine both lists
                 const allInventories = [...ownedInventories, ...collaboratedInventories];
@@ -65,18 +76,19 @@ export function InventoryProvider({ children, user }) {
 
         loadInventories();
 
-        // Set up real-time listener for owned inventories
+        // Real-time listener for owned inventories
         const inventoriesRef = collection(db, 'inventories');
-        const q = query(inventoriesRef, where('ownerId', '==', user.uid));
+        const qOwned = query(inventoriesRef, where('ownerId', '==', user.uid));
+        const unsubOwned = onSnapshot(qOwned, () => loadInventories());
 
-        const unsubscribe = onSnapshot(q, () => {
-            // Reload when changes detected
-            loadInventories();
-        }, (error) => {
-            console.error('Error in inventory listener:', error);
-        });
+        // Real-time listener for user profile (to detect nickname changes)
+        const qUser = query(collection(db, 'users'), where('uid', '==', user.uid));
+        const unsubUser = onSnapshot(qUser, () => loadInventories());
 
-        return () => unsubscribe();
+        return () => {
+            unsubOwned();
+            unsubUser();
+        };
     }, [user, currentInventoryId]);
 
     // Update current inventory and permissions when selection changes

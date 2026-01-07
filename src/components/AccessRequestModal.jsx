@@ -1,6 +1,6 @@
 // Modal for requesting access to another user's inventory
 import { useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export default function AccessRequestModal({ isOpen, onClose, targetUser, currentUser, onSuccess, currentInventoryId, currentInventoryName }) {
@@ -15,13 +15,17 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
 
         setIsSubmitting(true);
         try {
-            // Create access request
-            await addDoc(collection(db, 'accessRequests'), {
+            // Create access request and log activity
+            const batch = writeBatch(db);
+            const requestsRef = collection(db, 'accessRequests');
+            const newRequestRef = doc(requestsRef);
+
+            batch.set(newRequestRef, {
                 requesterId: currentUser.uid,
                 requesterName: currentUser.displayName,
                 requesterPhoto: currentUser.photoURL,
                 requesterEmail: currentUser.email,
-                targetUserId: targetUser?.uid || '', // Empty if it's an upgrade request for someone's inventory
+                targetUserId: targetUser?.uid || '',
                 targetUserName: targetUser?.displayName || '',
                 inventoryId: currentInventoryId || '',
                 inventoryName: currentInventoryName || '',
@@ -31,6 +35,19 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
                 createdAt: serverTimestamp(),
                 isUpgrade: !!currentInventoryId
             });
+
+            // Add notification for the requester (activity log)
+            const notificationsRef = collection(db, 'notifications');
+            const activityNotifRef = doc(notificationsRef);
+            batch.set(activityNotifRef, {
+                targetUid: currentUser.uid,
+                type: 'request_sent',
+                message: `You sent a request to ${targetUser?.displayName || 'view inventory'}.`,
+                read: true, // Activity log starts as read
+                createdAt: serverTimestamp()
+            });
+
+            await batch.commit();
 
             // Success!
             onSuccess?.();

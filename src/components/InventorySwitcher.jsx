@@ -118,7 +118,7 @@ export default function InventorySwitcher() {
             <InventoryNicknameModal
                 isOpen={!!renameInventory}
                 onClose={() => setRenameInventory(null)}
-                inventory={renameInventory}
+                inventory={renameInventory ? { ...renameInventory, userId: permissions?.userId } : null}
                 onSuccess={() => {
                     // Inventory list will auto-refresh via real-time listener
                 }}
