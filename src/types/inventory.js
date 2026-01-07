@@ -60,7 +60,7 @@ export const RequestStatus = {
  * @param {Inventory} inventory - The inventory object
  * @returns {UserPermission}
  */
-export function calculatePermissions(userId, inventory) {
+export function calculatePermissions(inventory, userId) {
     if (!inventory || !userId) {
         return {
             isOwner: false,

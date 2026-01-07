@@ -14,7 +14,8 @@ export default function InventoryNicknameModal({ isOpen, onClose, inventory, onS
         try {
             const inventoryRef = doc(db, 'inventories', inventory.id);
             await updateDoc(inventoryRef, {
-                nickname: nickname.trim() || null
+                nickname: nickname.trim() || null,
+                updatedAt: new Date()
             });
 
             onSuccess?.();
