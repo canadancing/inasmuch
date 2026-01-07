@@ -164,7 +164,7 @@ export default function App() {
 
             {/* iOS App Store-Style Navigation Dock */}
             <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-1 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-2xl px-4 py-3 rounded-[28px] border border-gray-700/30 shadow-2xl">
+                <div className="flex items-center gap-1 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl px-4 py-3 rounded-[28px] border border-gray-200/30 dark:border-gray-700/30 shadow-2xl">
                     {navItems.map((item) => {
                         const isActive = currentView === item.id;
                         return (
@@ -181,11 +181,11 @@ export default function App() {
                                         setCurrentView(item.id);
                                     }
                                 }}
-                                className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-700/30"
+                                className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30"
                             >
                                 <span className={`text-2xl mb-1 transition-all ${isActive ? 'scale-110' : 'opacity-60'
                                     }`}>{item.icon}</span>
-                                <span className={`text-[10px] font-semibold tracking-tight transition-all ${isActive ? 'text-blue-400' : 'text-gray-400'
+                                <span className={`text-[10px] font-semibold tracking-tight transition-all ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
                                     }`}>{item.label}</span>
                             </button>
                         );

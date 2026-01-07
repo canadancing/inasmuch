@@ -7,19 +7,34 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Search states
+    const [residentSearch, setResidentSearch] = useState('');
+    const [itemSearch, setItemSearch] = useState('');
+    const [showResidentDropdown, setShowResidentDropdown] = useState(false);
+    const [showItemDropdown, setShowItemDropdown] = useState(false);
+
+    // Filtered lists
+    const filteredResidents = residents.filter(r =>
+        `${r.firstName} ${r.lastName} ${r.room}`.toLowerCase().includes(residentSearch.toLowerCase())
+    );
+
+    const filteredItems = items.filter(item =>
+        item.name.toLowerCase().includes(itemSearch.toLowerCase())
+    );
+
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);
         if (existing) {
-            // Increase quantity
             setSelectedItems(selectedItems.map(si =>
                 si.item.id === item.id
                     ? { ...si, quantity: si.quantity + 1 }
                     : si
             ));
         } else {
-            // Add new item
             setSelectedItems([...selectedItems, { item, quantity: 1 }]);
         }
+        setItemSearch('');
+        setShowItemDropdown(false);
     };
 
     const handleRemoveItem = (itemId) => {
@@ -68,6 +83,8 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
             setSelectedResident(null);
             setSelectedItems([]);
             setNotes('');
+            setResidentSearch('');
+            setItemSearch('');
             setLogDate(new Date().toISOString().split('T')[0]);
             onClose();
         } catch (error) {
@@ -80,8 +97,8 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl animate-scale-in" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 rounded-t-3xl">
                     <div className="flex items-center justify-between">
@@ -97,61 +114,107 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
 
                 {/* Content */}
                 <div className="p-6 space-y-6">
-                    {/* Resident Selection */}
-                    <div>
+                    {/* Resident Selection with Search */}
+                    <div className="relative">
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                             Resident
                         </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {residents.map((resident) => (
-                                <button
-                                    key={resident.id}
-                                    onClick={() => setSelectedResident(resident)}
-                                    className={`p-3 rounded-xl border-2 transition-all ${selectedResident?.id === resident.id
-                                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
-                                >
-                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                        {resident.firstName} {resident.lastName}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {resident.room}
-                                    </div>
-                                </button>
-                            ))}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={selectedResident ? `${selectedResident.firstName} ${selectedResident.lastName}` : residentSearch}
+                                onChange={(e) => {
+                                    setResidentSearch(e.target.value);
+                                    setShowResidentDropdown(true);
+                                    setSelectedResident(null);
+                                }}
+                                onFocus={() => setShowResidentDropdown(true)}
+                                placeholder="Search residents..."
+                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
+                            />
+                            {showResidentDropdown && filteredResidents.length > 0 && (
+                                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                    {filteredResidents.map((resident) => (
+                                        <button
+                                            key={resident.id}
+                                            onClick={() => {
+                                                setSelectedResident(resident);
+                                                setShowResidentDropdown(false);
+                                                setResidentSearch('');
+                                            }}
+                                            className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div className="font-semibold text-gray-900 dark:text-white">
+                                                    {resident.firstName} {resident.lastName}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {resident.room}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+                        {selectedResident && (
+                            <div className="mt-2 p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 flex items-center justify-between">
+                                <div>
+                                    <div className="font-semibold text-primary-900 dark:text-primary-100">
+                                        {selectedResident.firstName} {selectedResident.lastName}
+                                    </div>
+                                    <div className="text-xs text-primary-600 dark:text-primary-400">
+                                        {selectedResident.room}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedResident(null)}
+                                    className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Item Selection */}
-                    <div>
+                    {/* Item Selection with Search */}
+                    <div className="relative">
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                             Items
                         </label>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                            {items.map((item) => {
-                                const selected = selectedItems.find(si => si.item.id === item.id);
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => handleAddItem(item)}
-                                        className={`relative p-3 rounded-xl border-2 transition-all ${selected
-                                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                            }`}
-                                    >
-                                        <div className="text-2xl mb-1">{item.icon}</div>
-                                        <div className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                                            {item.name}
-                                        </div>
-                                        {selected && (
-                                            <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center">
-                                                {selected.quantity}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={itemSearch}
+                                onChange={(e) => {
+                                    setItemSearch(e.target.value);
+                                    setShowItemDropdown(true);
+                                }}
+                                onFocus={() => setShowItemDropdown(true)}
+                                placeholder="Search items..."
+                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
+                            />
+                            {showItemDropdown && filteredItems.length > 0 && (
+                                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                    {filteredItems.map((item) => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => handleAddItem(item)}
+                                            className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
+                                        >
+                                            <span className="text-2xl">{item.icon}</span>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-gray-900 dark:text-white">
+                                                    {item.name}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Stock: {item.currentStock}
+                                                </div>
                                             </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -242,8 +305,8 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                         onClick={handleSubmit}
                         disabled={!selectedResident || selectedItems.length === 0 || isSubmitting}
                         className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${!selectedResident || selectedItems.length === 0 || isSubmitting
-                                ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                : 'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20'
+                            ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                            : 'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/20'
                             }`}
                     >
                         {isSubmitting ? (
