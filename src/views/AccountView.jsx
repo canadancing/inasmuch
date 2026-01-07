@@ -6,6 +6,7 @@ import PendingRequestsSection from '../components/PendingRequestsSection';
 import YourRequestsSection from '../components/YourRequestsSection';
 import NotificationsSection from '../components/NotificationsSection';
 import CollaboratorList from '../components/CollaboratorList';
+import DataManagement from '../components/DataManagement';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -229,6 +230,11 @@ export default function AccountView({ user, onLogin, onLogout }) {
             <NotificationsSection user={user} />
             <PendingRequestsSection user={user} />
             <YourRequestsSection user={user} />
+
+            {/* Data Backup & Restore */}
+            <div className="p-4 rounded-3xl bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-200/50 dark:border-gray-800/50 shadow-sm">
+                <DataManagement user={user} />
+            </div>
 
             {/* Standard Sign Out */}
             <div className="flex justify-center pt-2">
