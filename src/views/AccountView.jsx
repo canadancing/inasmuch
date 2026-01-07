@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import AccessRequestModal from '../components/AccessRequestModal';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -8,6 +9,7 @@ export default function AccountView({ user, onLogin, onLogout }) {
     const [searchResult, setSearchResult] = useState(null);
     const [searching, setSearching] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [showRequestModal, setShowRequestModal] = useState(false);
 
     // Fetch user profile with userId
     useEffect(() => {
@@ -173,7 +175,10 @@ export default function AccountView({ user, onLogin, onLogout }) {
                                     ID: {searchResult.userId}
                                 </div>
                             </div>
-                            <button className="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors">
+                            <button
+                                onClick={() => setShowRequestModal(true)}
+                                className="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors"
+                            >
                                 Request Access
                             </button>
                         </div>
@@ -198,6 +203,19 @@ export default function AccountView({ user, onLogin, onLogout }) {
                     Sign Out
                 </button>
             </div>
+
+            {/* Access Request Modal */}
+            <AccessRequestModal
+                isOpen={showRequestModal}
+                onClose={() => setShowRequestModal(false)}
+                targetUser={searchResult}
+                currentUser={user}
+                onSuccess={() => {
+                    alert('Request sent successfully!');
+                    setSearchResult(null);
+                    setSearchId('');
+                }}
+            />
         </div>
     );
 }
