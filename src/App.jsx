@@ -4,6 +4,7 @@ import { useFirestore } from './hooks/useFirestore';
 import { useCustomIcons } from './hooks/useCustomIcons';
 import { useTags } from './hooks/useTags';
 import { usePendingRequestsCount } from './hooks/usePendingRequestsCount';
+import { useInventory } from './context/InventoryContext';
 import ThemeToggle from './components/ThemeToggle';
 import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
@@ -43,6 +44,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
     } = useTags();
 
     const pendingRequestsCount = usePendingRequestsCount(user);
+    const { permissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
 
