@@ -223,7 +223,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
 
             {/* Bottom Nav - iOS Dock Style with Glassmorphism */}
             <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-1 px-3 py-2 bg-white/10 dark:bg-white/10 backdrop-blur-2xl rounded-full shadow-2xl border border-white/20">
+                <div className="flex items-center gap-1 px-3 py-2 bg-gray-900/90 dark:bg-gray-900/90 backdrop-blur-2xl rounded-full shadow-2xl border border-gray-700/50">
                     {navItems.map((item) => {
                         const isActive = currentView === item.id;
                         return (
