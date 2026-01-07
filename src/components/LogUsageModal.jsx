@@ -22,28 +22,31 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
         `${r.firstName} ${r.lastName} ${r.room}`.toLowerCase().includes(residentSearch.toLowerCase())
     );
 
-    // Close dropdowns when clicking outside
+    const filteredItems = items.filter(item =>
+        item.name.toLowerCase().includes(itemSearch.toLowerCase())
+    );
+
+    // Close dropdowns when clicking outside - improved version
     useEffect(() => {
         const handleClickOutside = (event) => {
+            // Check if click is outside resident dropdown
             if (residentDropdownRef.current && !residentDropdownRef.current.contains(event.target)) {
                 setShowResidentDropdown(false);
             }
+            // Check if click is outside item dropdown
             if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
                 setShowItemDropdown(false);
             }
         };
 
         if (isOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
+            // Use capture phase to detect clicks before they reach the input
+            document.addEventListener('mousedown', handleClickOutside, true);
         }
         return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener('mousedown', handleClickOutside, true);
         };
     }, [isOpen]);
-
-    const filteredItems = items.filter(item =>
-        item.name.toLowerCase().includes(itemSearch.toLowerCase())
-    );
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);
@@ -117,6 +120,17 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
         }
     };
 
+    // Handle closing dropdowns when focusing another input
+    const handleResidentFocus = () => {
+        setShowResidentDropdown(true);
+        setShowItemDropdown(false);
+    };
+
+    const handleItemFocus = () => {
+        setShowItemDropdown(true);
+        setShowResidentDropdown(false);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -149,13 +163,10 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 onChange={(e) => {
                                     setResidentSearch(e.target.value);
                                     setShowResidentDropdown(true);
-                                    setShowItemDropdown(false); // Close items dropdown
+                                    setShowItemDropdown(false);
                                     setSelectedResident(null);
                                 }}
-                                onFocus={() => {
-                                    setShowResidentDropdown(true);
-                                    setShowItemDropdown(false); // Close items dropdown
-                                }}
+                                onFocus={handleResidentFocus}
                                 placeholder="Search residents..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
@@ -232,12 +243,9 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 onChange={(e) => {
                                     setItemSearch(e.target.value);
                                     setShowItemDropdown(true);
-                                    setShowResidentDropdown(false); // Close resident dropdown
+                                    setShowResidentDropdown(false);
                                 }}
-                                onFocus={() => {
-                                    setShowItemDropdown(true);
-                                    setShowResidentDropdown(false); // Close resident dropdown
-                                }}
+                                onFocus={handleItemFocus}
                                 placeholder="Search items..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
