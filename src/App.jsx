@@ -10,7 +10,7 @@ import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
 import InventorySwitcher from './components/InventorySwitcher';
 
-export default function App({ user, loading: authLoading, loginWithGoogle, logout, isAdmin }) {
+export default function App({ user, loading: authLoading, loginWithGoogle, logout, isAdmin, requestAdminAccess }) {
     const [currentView, setCurrentView] = useState('stock');
     const { isDark, toggleTheme } = useTheme();
     const {
