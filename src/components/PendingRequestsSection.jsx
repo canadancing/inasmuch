@@ -1,13 +1,11 @@
 // Component for managing access requests (for inventory owners)
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, updateDoc, doc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useInventory } from '../context/InventoryContext';
 
 export default function PendingRequestsSection({ user }) {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { currentInventory } = useInventory();
 
     useEffect(() => {
         if (!user) {
@@ -39,20 +37,30 @@ export default function PendingRequestsSection({ user }) {
     }, [user]);
 
     const handleApprove = async (request) => {
-        if (!currentInventory) {
-            alert('No inventory selected');
-            return;
-        }
-
         try {
+            // Find the user's owned inventories
+            const inventoriesRef = collection(db, 'inventories');
+            const q = query(inventoriesRef, where('ownerId', '==', user.uid));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                alert('No inventory found. Please create an inventory first.');
+                return;
+            }
+
+            // Use the first inventory (or could show a picker if multiple)
+            const inventoryToShare = snapshot.docs[0];
+            const inventoryId = inventoryToShare.id;
+
             // Update request status
             await updateDoc(doc(db, 'accessRequests', request.id), {
                 status: 'approved',
-                respondedAt: serverTimestamp()
+                respondedAt: serverTimestamp(),
+                inventoryId: inventoryId  // Store which inventory was shared
             });
 
             // Add collaborator to inventory
-            const inventoryRef = doc(db, 'inventories', currentInventory.id);
+            const inventoryRef = doc(db, 'inventories', inventoryId);
             await updateDoc(inventoryRef, {
                 [`collaborators.${request.requesterId}`]: {
                     permission: request.permission,
@@ -61,10 +69,10 @@ export default function PendingRequestsSection({ user }) {
                 }
             });
 
-            alert(`✅ Granted ${request.permission} access to ${request.requesterName}`);
+            alert(`✅ Granted ${request.permission} access to ${request.requesterName}!`);
         } catch (error) {
             console.error('Error approving request:', error);
-            alert('Failed to approve request');
+            alert('Failed to approve request: ' + error.message);
         }
     };
 
