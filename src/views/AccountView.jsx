@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
@@ -27,7 +27,7 @@ export default function AccountView({ user, onLogin, onLogout }) {
 
                     // Backfill: If user doesn't have userId, generate one now
                     if (!userData.userId) {
-                        console.log('Generating userId for existing user...');
+                        console.log('Generating userId and inventory for existing user...');
                         const { generateUniqueUserId } = await import('../firebase/userIdUtils');
                         const newUserId = await generateUniqueUserId();
 
@@ -36,6 +36,25 @@ export default function AccountView({ user, onLogin, onLogout }) {
                         await updateDoc(userDocRef, {
                             userId: newUserId
                         });
+
+                        // Check if user has any inventories
+                        const inventoriesRef = collection(db, 'inventories');
+                        const invQuery = query(inventoriesRef, where('ownerId', '==', user.uid));
+                        const invSnapshot = await getDocs(invQuery);
+
+                        // Create default inventory if none exists
+                        if (invSnapshot.empty) {
+                            const inventoryId = `inv_${user.uid}_${Date.now()}`;
+                            await addDoc(collection(db, 'inventories'), {
+                                id: inventoryId,
+                                ownerId: user.uid,
+                                name: `${user.displayName || 'My'} Inventory`,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                                collaborators: {}
+                            });
+                            console.log('✅ Created default inventory for existing user');
+                        }
 
                         // Update local state with new ID
                         setUserProfile({ ...userData, userId: newUserId });
