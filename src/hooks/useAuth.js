@@ -23,10 +23,40 @@ export function useAuth() {
     const [role, setRole] = useState(null); // 'super-admin', 'admin', 'user', or null
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isDark, setIsDark] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('theme') === 'dark' ||
+                (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        }
+        return false;
+    });
     const redirectProcessed = useRef(false);
 
     // The Super Admin (Owner) Email
     const SUPER_ADMIN_EMAIL = 'loading800@gmail.com';
+
+    // Theme toggle function
+    const toggleTheme = () => {
+        setIsDark(prev => {
+            const newValue = !prev;
+            localStorage.setItem('theme', newValue ? 'dark' : 'light');
+            if (newValue) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            return newValue;
+        });
+    };
+
+    // Apply theme on mount
+    useEffect(() => {
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [isDark]);
 
     useEffect(() => {
         let unsubscribe;
@@ -166,6 +196,8 @@ export function useAuth() {
         role,
         loading,
         error,
+        isDark,
+        toggleTheme,
         loginWithGoogle,
         logout,
         requestAdminAccess,

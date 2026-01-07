@@ -49,8 +49,8 @@ export default function AdminView({
         tabs.push({ id: 'permissions', label: 'Access', icon: '🛡️' });
     }
 
-    // Role-based access control for tabs
-    const canAccessManage = isSuperAdmin || (user && user.role === 'admin');
+    // Role-based access control for tabs - Check inventory permissions!
+    const canAccessManage = permissions?.isOwner || permissions?.canEdit || isSuperAdmin || (user && user.role === 'admin');
 
     return (
         <div className="space-y-6 animate-fade-in">

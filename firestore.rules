@@ -57,8 +57,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && 
         request.resource.data.ownerId == getUserId();
       
-      // Can update if: owner (only owners can manage collaborators)
-      allow update: if isOwner(inventoryId);
+      // Can update if: owner (for collaborators/name) OR viewer (for nickname only)
+      allow update: if isOwner(inventoryId) ||
+        (hasViewAccess(inventoryId) && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt']));
       
       // Can delete if: owner
       allow delete: if isOwner(inventoryId);

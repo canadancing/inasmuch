@@ -11,7 +11,7 @@ import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
 
-export default function App({ user, loading, loginWithGoogle, logout, isAdmin, role, requestAdminAccess }) {
+export default function App({ user, loading, loginWithGoogle, logout, isAdmin, role, permissions, requestAdminAccess, isDark, toggleTheme }) {
     const [currentView, setCurrentView] = useState('stock');
 
     const {
@@ -44,7 +44,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
     } = useTags();
 
     const pendingRequestsCount = usePendingRequestsCount(user);
-    const { permissions } = useInventory();
+    const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
 
@@ -57,8 +57,8 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-500">
-            {/* Header with Branding and Theme Toggle */}
-            <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+            {/* Header with Branding and Theme Toggle - iOS Glass Effect */}
+            <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-xl shadow-lg">
@@ -76,7 +76,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
 
                     {user && <InventorySwitcher />}
 
-                    <ThemeToggle />
+                    <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
                 </div>
             </header>
 
@@ -134,7 +134,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
                         user={user}
                         isAdmin={isAdmin}
                         role={role}
-                        permissions={permissions}
+                        permissions={inventoryPermissions}
                         onRequestAdminAccess={requestAdminAccess}
                     />
                 ) : currentView === 'account' ? (
