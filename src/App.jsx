@@ -164,10 +164,10 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, r
                                 }}
                                 className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 relative"
                             >
-                                {/* iOS Notification Badge */}
+                                {/* iOS Notification Badge - IMPROVED */}
                                 {item.id === 'account' && pendingRequestsCount > 0 && (
-                                    <div className="absolute -top-1 right-3 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-900 dark:border-gray-950 z-10">
-                                        <span className="text-white text-[10px] font-bold">
+                                    <div className="absolute -top-1 right-2 min-w-[24px] h-6 px-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl border-[3px] border-white dark:border-gray-900 z-10 animate-pulse">
+                                        <span className="text-white text-xs font-black leading-none">
                                             {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
                                         </span>
                                     </div>
