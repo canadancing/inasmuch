@@ -36,6 +36,7 @@ export default function CollaboratorList({ user }) {
                             const userData = userDoc.data();
                             guestList.push({
                                 uid: collabUid,
+                                userId: userData.userId,
                                 displayName: userData.displayName,
                                 photoURL: userData.photoURL,
                                 role: typeof roleInfo === 'string' ? roleInfo : roleInfo.permission,
@@ -72,6 +73,7 @@ export default function CollaboratorList({ user }) {
                         const ownerData = ownerSnapshot.docs[0].data();
                         hostList.push({
                             uid: ownerData.uid,
+                            userId: ownerData.userId,
                             displayName: ownerData.displayName,
                             photoURL: ownerData.photoURL,
                             role: requestData.permission,
@@ -224,6 +226,11 @@ export default function CollaboratorList({ user }) {
                             <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
                                 {collab.displayName}
                             </p>
+                            {collab.userId && (
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                                    ID: {collab.userId}
+                                </p>
+                            )}
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className={`text-[9px] font-bold uppercase tracking-tight ${collab.type === 'guest' ? 'text-primary-500' : 'text-gray-500'}`}>
                                     {collab.type === 'guest' ? '👤 Guest' : '🏠 Host'}

@@ -6,6 +6,7 @@ import InventoryNicknameModal from './InventoryNicknameModal';
 export default function InventorySwitcher() {
     const { inventories, currentInventoryId, switchInventory, currentInventory, permissions, user } = useInventory();
     const [renameInventory, setRenameInventory] = useState(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
 
     if (!inventories || inventories.length === 0) {
         return null;
@@ -53,8 +54,11 @@ export default function InventorySwitcher() {
 
     return (
         <>
-            <div className="relative group">
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <div className="relative">
+                <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
                         {currentInventory ? getDisplayName(currentInventory) : 'Select Inventory'}
                     </span>
@@ -63,56 +67,64 @@ export default function InventorySwitcher() {
                             {getRoleBadge(currentInventory).icon}
                         </span>
                     )}
-                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
 
                 {/* Dropdown */}
-                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    <div className="p-2">
-                        {inventories.map((inventory) => {
-                            const badge = getRoleBadge(inventory);
-                            return (
-                                <div
-                                    key={inventory.id}
-                                    className={`flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${currentInventoryId === inventory.id ? 'bg-gray-100 dark:bg-gray-700' : ''
-                                        }`}
-                                >
-                                    <button
-                                        onClick={() => switchInventory(inventory.id)}
-                                        className="flex-1 flex items-center justify-between text-left"
-                                    >
-                                        <div>
-                                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                {getDisplayName(inventory)}
-                                            </div>
-                                            {inventory.nickname && (
-                                                <div className="text-xs text-gray-500">
-                                                    {inventory.name}
+                {dropdownOpen && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                        <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
+                            <div className="p-2">
+                                {inventories.map((inventory) => {
+                                    const badge = getRoleBadge(inventory);
+                                    return (
+                                        <div
+                                            key={inventory.id}
+                                            className={`flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${currentInventoryId === inventory.id ? 'bg-gray-100 dark:bg-gray-700' : ''
+                                                }`}
+                                        >
+                                            <button
+                                                onClick={() => {
+                                                    switchInventory(inventory.id);
+                                                    setDropdownOpen(false);
+                                                }}
+                                                className="flex-1 flex items-center justify-between text-left"
+                                            >
+                                                <div>
+                                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        {getDisplayName(inventory)}
+                                                    </div>
+                                                    {inventory.nickname && (
+                                                        <div className="text-xs text-gray-500">
+                                                            {inventory.name}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                                <span className={`text-xs ${badge.color} flex items-center gap-1`}>
+                                                    <span>{badge.icon}</span>
+                                                    <span>{badge.label}</span>
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setRenameInventory(inventory);
+                                                }}
+                                                className="px-2 py-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                                title="Rename"
+                                            >
+                                                <span className="text-sm">✏️</span>
+                                            </button>
                                         </div>
-                                        <span className={`text-xs ${badge.color} flex items-center gap-1`}>
-                                            <span>{badge.icon}</span>
-                                            <span>{badge.label}</span>
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setRenameInventory(inventory);
-                                        }}
-                                        className="px-2 py-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                                        title="Rename"
-                                    >
-                                        <span className="text-sm">✏️</span>
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             <InventoryNicknameModal
