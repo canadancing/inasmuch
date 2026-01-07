@@ -8,6 +8,7 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
+import InventorySwitcher from './components/InventorySwitcher';
 
 export default function App({ user, loading: authLoading, loginWithGoogle, logout, isAdmin }) {
     const [currentView, setCurrentView] = useState('stock');
@@ -74,7 +75,10 @@ export default function App({ user, loading: authLoading, loginWithGoogle, logou
                             <p className="text-[10px] uppercase tracking-[0.2em] text-primary-500 dark:text-primary-400 font-bold">Supply Tracker</p>
                         </div>
                     </div>
-                    <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
+                    <div className="flex items-center gap-3">
+                        {user && <InventorySwitcher />}
+                        <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
+                    </div>
                 </div>
             </header>
 
