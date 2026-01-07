@@ -1,16 +1,35 @@
 // Modal for restocking items quickly
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-export default function RestockModal({ isOpen, onClose, items, onRestock, user }) {
+export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView }) {
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
     const [showItemDropdown, setShowItemDropdown] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Ref for click-outside detection
+    const itemDropdownRef = useRef(null);
+
     // Filtered items
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(itemSearch.toLowerCase())
     );
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
+                setShowItemDropdown(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);
@@ -89,7 +108,7 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user }
                 {/* Content */}
                 <div className="p-6 space-y-6">
                     {/* Item Selection with Search */}
-                    <div className="relative">
+                    <div className="relative" ref={itemDropdownRef}>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                             Select Items to Restock
                         </label>
@@ -129,9 +148,15 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user }
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                                                 No items found
                                             </p>
-                                            <p className="text-xs text-primary-500 dark:text-primary-400">
-                                                💡 Add items in the <strong>ADMIN → Manage</strong> tab
-                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    setCurrentView?.('admin');
+                                                }}
+                                                className="px-4 py-2 text-sm font-semibold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                                            >
+                                                ➕ Add Items
+                                            </button>
                                         </div>
                                     )}
                                 </div>

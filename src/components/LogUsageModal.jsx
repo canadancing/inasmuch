@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user }) {
+export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView }) {
     const [selectedResident, setSelectedResident] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -13,10 +13,33 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
     const [showResidentDropdown, setShowResidentDropdown] = useState(false);
     const [showItemDropdown, setShowItemDropdown] = useState(false);
 
+    // Refs for click-outside detection
+    const residentDropdownRef = useRef(null);
+    const itemDropdownRef = useRef(null);
+
     // Filtered lists
     const filteredResidents = residents.filter(r =>
         `${r.firstName} ${r.lastName} ${r.room}`.toLowerCase().includes(residentSearch.toLowerCase())
     );
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (residentDropdownRef.current && !residentDropdownRef.current.contains(event.target)) {
+                setShowResidentDropdown(false);
+            }
+            if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
+                setShowItemDropdown(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isOpen]);
 
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(itemSearch.toLowerCase())
@@ -115,7 +138,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                 {/* Content */}
                 <div className="p-6 space-y-6">
                     {/* Resident Selection with Search */}
-                    <div className="relative">
+                    <div className="relative" ref={residentDropdownRef}>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                             Resident
                         </label>
@@ -159,9 +182,15 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                                                 No residents found
                                             </p>
-                                            <p className="text-xs text-primary-500 dark:text-primary-400">
-                                                💡 Add residents in the <strong>ADMIN → Manage</strong> tab
-                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    setCurrentView?.('admin');
+                                                }}
+                                                className="px-4 py-2 text-sm font-semibold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                                            >
+                                                ➕ Add Residents
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -188,7 +217,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                     </div>
 
                     {/* Item Selection with Search */}
-                    <div className="relative">
+                    <div className="relative" ref={itemDropdownRef}>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                             Items
                         </label>
@@ -228,9 +257,15 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                                                 No items found
                                             </p>
-                                            <p className="text-xs text-primary-500 dark:text-primary-400">
-                                                💡 Add items in the <strong>ADMIN → Manage</strong> tab
-                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    setCurrentView?.('admin');
+                                                }}
+                                                className="px-4 py-2 text-sm font-semibold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                                            >
+                                                ➕ Add Items
+                                            </button>
                                         </div>
                                     )}
                                 </div>

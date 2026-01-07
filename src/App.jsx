@@ -124,6 +124,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         items={items}
                         residents={residents}
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+                setCurrentView={setCurrentView}
                         customIcons={customIcons}
                         tags={tags}
                         getTagStyles={getTagStyles}
@@ -239,6 +240,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 residents={residents}
                 items={items}
                 onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+                setCurrentView={setCurrentView}
                 user={user}
             />
 
@@ -248,6 +250,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 onClose={() => setShowRestockModal(false)}
                 items={items}
                 onRestock={onRestock}
+                setCurrentView={setCurrentView}
                 user={user}
             />
         </div>
