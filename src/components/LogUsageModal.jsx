@@ -149,9 +149,13 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 onChange={(e) => {
                                     setResidentSearch(e.target.value);
                                     setShowResidentDropdown(true);
+                                    setShowItemDropdown(false); // Close items dropdown
                                     setSelectedResident(null);
                                 }}
-                                onFocus={() => setShowResidentDropdown(true)}
+                                onFocus={() => {
+                                    setShowResidentDropdown(true);
+                                    setShowItemDropdown(false); // Close items dropdown
+                                }}
                                 placeholder="Search residents..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
@@ -228,8 +232,12 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                 onChange={(e) => {
                                     setItemSearch(e.target.value);
                                     setShowItemDropdown(true);
+                                    setShowResidentDropdown(false); // Close resident dropdown
                                 }}
-                                onFocus={() => setShowItemDropdown(true)}
+                                onFocus={() => {
+                                    setShowItemDropdown(true);
+                                    setShowResidentDropdown(false); // Close resident dropdown
+                                }}
                                 placeholder="Search items..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />

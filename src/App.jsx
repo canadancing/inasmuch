@@ -13,7 +13,7 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
-import RestockModal from ./components/RestockModal;
+import RestockModal from ./ components / RestockModal;
 import AccessRequestModal from './components/AccessRequestModal';
 
 export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
@@ -67,11 +67,11 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const [upgradeContext, setUpgradeContext] = useState(null);
 
     const navItems = [
-        { id: 'stock', label: 'STOCK', icon: '📦' },
-        { id: 'log', label: 'LOG', icon: '➖', isAction: true }, // Minus sign for removing items
-        { id: 'restock', label: 'RESTOCK', icon: '➕', isAction: true }, // Plus sign for adding items
-        { id: 'admin', label: 'ADMIN', icon: '⚙️' },
-        { id: 'account', label: 'ACCOUNT', icon: '👤' },
+        { id: 'stock', label: 'STOCK', icon: '📦' }, // Box icon
+        { id: 'log', label: 'LOG', icon: '−', isAction: true }, // Minus for removing items
+        { id: 'restock', label: 'RESTOCK', icon: '+', isAction: true }, // Plus for adding items
+        { id: 'admin', label: 'ADMIN', icon: '⚙' }, // Gear icon
+        { id: 'account', label: 'ACCOUNT', icon: '👤' }, // Person icon
     ];
 
     return (
@@ -124,7 +124,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         items={items}
                         residents={residents}
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
-                setCurrentView={setCurrentView}
+                        setCurrentView={setCurrentView}
                         customIcons={customIcons}
                         tags={tags}
                         getTagStyles={getTagStyles}
