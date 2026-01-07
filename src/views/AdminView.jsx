@@ -12,6 +12,8 @@ export default function AdminView({
     loading,
     isDemo,
     isDark,
+    permissions,
+    isSuperAdmin,
     onAddResident,
     onUpdateResident,
     onRemoveResident,
