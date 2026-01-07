@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
+import CollaboratorManagement from '../components/CollaboratorManagement';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -19,8 +20,27 @@ export default function AccountView({ user, onLogin, onLogout }) {
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('uid', '==', user.uid));
                 const snapshot = await getDocs(q);
+
                 if (!snapshot.empty) {
-                    setUserProfile(snapshot.docs[0].data());
+                    const userData = snapshot.docs[0].data();
+
+                    // Backfill: If user doesn't have userId, generate one now
+                    if (!userData.userId) {
+                        console.log('Generating userId for existing user...');
+                        const { generateUniqueUserId } = await import('../firebase/userIdUtils');
+                        const newUserId = await generateUniqueUserId();
+
+                        // Update the user document
+                        const userDocRef = snapshot.docs[0].ref;
+                        await updateDoc(userDocRef, {
+                            userId: newUserId
+                        });
+
+                        // Update local state with new ID
+                        setUserProfile({ ...userData, userId: newUserId });
+                    } else {
+                        setUserProfile(userData);
+                    }
                 }
             };
             fetchProfile();
@@ -134,6 +154,9 @@ export default function AccountView({ user, onLogin, onLogout }) {
 
             {/* Pending Requests (for owners) */}
             <PendingRequestsSection user={user} />
+
+            {/* Manage Existing Collaborators (for owners) */}
+            <CollaboratorManagement user={user} />
 
             {/* Find Users */}
             <div className="card p-6">

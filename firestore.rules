@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserId() {
+      return request.auth.uid;
+    }
+    
+    function isOwner(inventoryId) {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/inventories/$(inventoryId)).data.ownerId == getUserId();
+    }
+    
+    function hasEditAccess(inventoryId) {
+      let inventory = get(/databases/$(database)/documents/inventories/$(inventoryId)).data;
+      return isOwner(inventoryId) ||
+        (isSignedIn() && inventory.collaborators[getUserId()].permission == 'edit');
+    }
+    
+    function hasViewAccess(inventoryId) {
+      let inventory = get(/databases/$(database)/documents/inventories/$(inventoryId)).data;
+      return isOwner(inventoryId) ||
+        (isSignedIn() && getUserId() in inventory.collaborators);
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Anyone can read user profiles (needed for search)
+      allow read: if isSignedIn();
+      
+      // Users can only write their own profile
+      allow create: if isSignedIn() && getUserId() == userId;
+      allow update: if isSignedIn() && getUserId() == userId;
+      allow delete: if isSignedIn() && getUserId() == userId;
+    }
+    
+    // ============================================
+    // INVENTORIES COLLECTION
+    // ============================================
+    
+    match /inventories/{inventoryId} {
+      // Can read if: owner OR collaborator
+      allow read: if hasViewAccess(inventoryId);
+      
+      // Can create if: user is setting themselves as owner
+      allow create: if isSignedIn() && 
+        request.resource.data.ownerId == getUserId();
+      
+      // Can update if: owner (only owners can manage collaborators)
+      allow update: if isOwner(inventoryId);
+      
+      // Can delete if: owner
+      allow delete: if isOwner(inventoryId);
+      
+      // ============================================
+      // ITEMS SUBCOLLECTION
+      // ============================================
+      
+      match /items/{itemId} {
+        // Can read if: have view access to inventory
+        allow read: if hasViewAccess(inventoryId);
+        
+        // Can create/update if: have edit access
+        allow create: if hasEditAccess(inventoryId);
+        allow update: if hasEditAccess(inventoryId);
+        
+        // Can delete if: owner only
+        allow delete: if isOwner(inventoryId);
+      }
+      
+      // ============================================
+      // RESIDENTS SUBCOLLECTION
+      // ============================================
+      
+      match /residents/{residentId} {
+        // Can read if: have view access to inventory
+        allow read: if hasViewAccess(inventoryId);
+        
+        // Can create/update if: have edit access
+        allow create: if hasEditAccess(inventoryId);
+        allow update: if hasEditAccess(inventoryId);
+        
+        // Can delete if: owner only
+        allow delete: if isOwner(inventoryId);
+      }
+      
+      // ============================================
+      // LOGS SUBCOLLECTION
+      // ============================================
+      
+      match /logs/{logId} {
+        // Can read if: have view access to inventory
+        allow read: if hasViewAccess(inventoryId);
+        
+        // Can create if: have edit access
+        allow create: if hasEditAccess(inventoryId);
+        
+        // Can update/delete if: owner only
+        allow update: if isOwner(inventoryId);
+        allow delete: if isOwner(inventoryId);
+      }
+    }
+    
+    // ============================================
+    // ACCESS REQUESTS COLLECTION
+    // ============================================
+    
+    match /accessRequests/{requestId} {
+      // Can read if: requester OR target (owner)
+      allow read: if isSignedIn() && 
+        (getUserId() == resource.data.requesterId || 
+         getUserId() == resource.data.targetUserId);
+      
+      // Can create if: signed in and setting yourself as requester
+      allow create: if isSignedIn() && 
+        request.resource.data.requesterId == getUserId() &&
+        request.resource.data.status == 'pending';
+      
+      // Can update if: you are the target (owner responding to request)
+      allow update: if isSignedIn() && 
+        getUserId() == resource.data.targetUserId;
+      
+      // No deletes allowed (keep audit trail)
+      allow delete: if false;
+    }
+  }
+}
