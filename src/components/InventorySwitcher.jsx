@@ -2,22 +2,16 @@
 import { useInventory } from '../context/InventoryContext';
 
 export default function InventorySwitcher() {
-    const { inventories, currentInventoryId, switchInventory, permissions } = useInventory();
+    const { inventories, currentInventoryId, switchInventory, currentInventory } = useInventory();
 
     if (!inventories || inventories.length === 0) {
         return null;
     }
 
-    const currentInventory = inventories.find(inv => inv.id === currentInventoryId);
     const getRoleBadge = (inventory) => {
-        if (inventory.ownerId === permissions?.isOwner) {
-            return { icon: '👑', label: 'Owner', color: 'text-green-500' };
-        }
-        const perm = inventory.collaborators?.[permissions?.userId];
-        if (perm?.permission === 'edit') {
-            return { icon: '✏️', label: 'Editor', color: 'text-orange-500' };
-        }
-        return { icon: '👁️', label: 'Viewer', color: 'text-blue-500' };
+        // For now, all inventories in the list are owned by the user
+        // Collaborated inventories will be added when we implement access requests
+        return { icon: '👑', label: 'Owner', color: 'text-green-500' };
     };
 
     if (inventories.length === 1) {
