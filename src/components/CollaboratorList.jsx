@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc, deleteField, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import AccessRequestModal from './AccessRequestModal';
 
 export default function CollaboratorList({ user }) {
     const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [upgradeRequest, setUpgradeRequest] = useState(null);
 
     useEffect(() => {
         if (!user) return;
@@ -207,6 +209,7 @@ export default function CollaboratorList({ user }) {
     }
 
     return (
+        <>
         <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h4 className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500 mb-1 ml-1">
                 Active Collaborators
@@ -246,9 +249,22 @@ export default function CollaboratorList({ user }) {
                                         <option value="edit">✏️ Edit</option>
                                     </select>
                                 ) : (
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400">
-                                        {collab.role === 'edit' ? '✏️ Edit' : '👁️ View'}
-                                    </span>
+                                    <select
+                                        value={collab.role}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'request_edit') {
+                                                setUpgradeRequest(collab);
+                                            }
+                                        }}
+                                        className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 outline-none cursor-pointer hover:text-primary-500 transition-colors"
+                                        disabled={collab.role === 'edit'}
+                                    >
+                                        <option value="view">👁️ View</option>
+                                        <option value="edit" disabled={collab.role === 'view'}>✏️ Edit</option>
+                                        {collab.role === 'view' && (
+                                            <option value="request_edit">🔄 Request Edit</option>
+                                        )}
+                                    </select>
                                 )}
                             </div>
                         </div>
@@ -271,5 +287,23 @@ export default function CollaboratorList({ user }) {
                 ))}
             </div>
         </div>
+
+        <AccessRequestModal
+            isOpen={!!upgradeRequest}
+            onClose={() => setUpgradeRequest(null)}
+            targetUser={upgradeRequest ? {
+                uid: upgradeRequest.uid,
+                displayName: upgradeRequest.displayName,
+                photoURL: upgradeRequest.photoURL
+            } : null}
+            currentUser={user}
+            currentInventoryId={upgradeRequest?.inventoryId}
+            currentInventoryName={upgradeRequest?.inventoryName}
+            onSuccess={() => {
+                setUpgradeRequest(null);
+                alert('✅ Upgrade request sent!');
+            }}
+        />
+    </>
     );
 }
