@@ -5,6 +5,7 @@ import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
 import CollaboratorManagement from '../components/CollaboratorManagement';
 import YourRequestsSection from '../components/YourRequestsSection';
+import NotificationsSection from '../components/NotificationsSection';
 
 export default function AccountView({ user, onLogin, onLogout }) {
     const [userProfile, setUserProfile] = useState(null);
@@ -175,6 +176,9 @@ export default function AccountView({ user, onLogin, onLogout }) {
                     </p>
                 </div>
             </div>
+
+            {/* System Notifications */}
+            <NotificationsSection user={user} />
 
             {/* Pending Requests (for owners) */}
             <PendingRequestsSection user={user} />

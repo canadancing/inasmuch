@@ -6,6 +6,7 @@ import { useFirestore } from './hooks/useFirestore';
 import { useCustomIcons } from './hooks/useCustomIcons';
 import { useTags } from './hooks/useTags';
 import { usePendingRequestsCount } from './hooks/usePendingRequestsCount';
+import { useUnreadNotificationsCount } from './hooks/useUnreadNotificationsCount';
 import { useInventory } from './context/InventoryContext';
 import ThemeToggle from './components/ThemeToggle';
 import ResidentView from './views/ResidentView';
@@ -53,38 +54,11 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         tagsMap
     } = useTags();
 
-    const pendingRequestsCount = usePendingRequestsCount(user);
+    const unreadNotificationsCount = useUnreadNotificationsCount(user);
+    const totalAccountNotifications = pendingRequestsCount + unreadNotificationsCount;
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
-
-    // Notification Listener
-    useEffect(() => {
-        if (!user) return;
-
-        const notificationsRef = collection(db, 'notifications');
-        const q = query(
-            notificationsRef,
-            where('targetUid', '==', user.uid),
-            where('read', '==', false)
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const notification = change.doc.data();
-
-                    // Show alert (Real-time feedback)
-                    alert(`📬 Notification: ${notification.message}`);
-
-                    // Mark as read immediately after alerting
-                    updateDoc(change.doc.ref, { read: true });
-                }
-            });
-        });
-
-        return () => unsubscribe();
-    }, [user]);
 
     const navItems = [
         { id: 'stock', label: 'STOCK', icon: '📦' },
@@ -220,11 +194,11 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                 }}
                                 className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 relative"
                             >
-                                {/* iOS Notification Badge - IMPROVED */}
-                                {item.id === 'account' && pendingRequestsCount > 0 && (
+                                {/* Unified Notification Badge */}
+                                {item.id === 'account' && totalAccountNotifications > 0 && (
                                     <div className="absolute -top-1 right-2 min-w-[24px] h-6 px-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl border-[3px] border-white dark:border-gray-900 z-10 animate-pulse">
-                                        <span className="text-white text-xs font-black leading-none">
-                                            {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                                        <span className="text-white text-[10px] font-black leading-none">
+                                            {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
                                         </span>
                                     </div>
                                 )}
