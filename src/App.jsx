@@ -128,9 +128,9 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         onAddResident={addResident}
                         onUpdateResident={updateResident}
                         onDeleteResident={deleteResident}
-                        // Log props
-                        onDeleteLog={() => { }} // Not implemented in useFirestore yet
-                        onUpdateLog={() => { }} // Not implemented in useFirestore yet
+                        // Log actions
+                        onDeleteLog={deleteLog}
+                        onUpdateLog={updateLog}
                         // Icon props
                         customIcons={customIcons}
                         onAddIcon={addCustomIcon}

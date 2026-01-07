@@ -258,13 +258,14 @@ export function useFirestore(user) {
     };
 
     // Delete item (owner only)
-    const removeItem = async (itemId) => {
+    const deleteItem = async (itemId) => {
         if (!permissions?.canDelete) {
             console.warn('Permission denied: Only the owner can delete items');
             return;
         }
 
-        const itemName = items.find(i => i.id === itemId)?.name || 'Item';
+        const item = items.find(i => i.id === itemId);
+        const itemName = item?.name || 'Item';
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
         await deleteDoc(itemDocRef);
 
@@ -323,7 +324,7 @@ export function useFirestore(user) {
     };
 
     // Delete resident (owner only)
-    const removeResident = async (residentId) => {
+    const deleteResident = async (residentId) => {
         if (!permissions?.canDelete) {
             console.warn('Permission denied: Only the owner can delete residents');
             return;
@@ -372,6 +373,17 @@ export function useFirestore(user) {
         });
     };
 
+    // Restock item (with permission check)
+    const restockItem = async (itemId, itemName, quantity, resId, resName, date) => {
+        if (!permissions?.canEdit) {
+            console.warn('Permission denied');
+            return;
+        }
+
+        // Call addLog which handles both logging and stock update
+        await addLog(resId, resName, itemId, itemName, 'restocked', quantity, date);
+    };
+
     return {
         items,
         residents,
@@ -385,10 +397,10 @@ export function useFirestore(user) {
         deleteLog,
         addItem,
         updateItem,
-        removeItem,
+        deleteItem,
         addResident,
         updateResident,
-        removeResident,
+        deleteResident,
         restockItem
     };
 }
