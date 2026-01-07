@@ -126,52 +126,51 @@ export default function AccountView({ user, onLogin, onLogout }) {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+        <div className="max-w-2xl mx-auto space-y-4 animate-fade-in px-4">
             {/* Profile Card with User ID & Integration */}
-            <div className="card overflow-hidden">
-                <div className="p-6 pb-0">
-                    <div className="flex items-center gap-4 mb-6">
+            <div className="card overflow-hidden !rounded-[2rem]">
+                <div className="p-6">
+                    <div className="flex items-center gap-3 mb-6">
                         <img
                             src={user.photoURL}
                             alt={user.displayName}
-                            className="w-20 h-20 rounded-2xl shadow-lg"
+                            className="w-14 h-14 rounded-xl shadow-md"
                         />
                         <div className="flex-1">
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">
                                 {user.displayName}
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {user.email}
                             </p>
                         </div>
                     </div>
 
                     {/* Unified Identity & Search Section */}
-                    <div className="bg-gradient-to-br from-primary-50 via-white/40 to-accent-50 dark:from-primary-900/30 dark:via-gray-900/20 dark:to-accent-900/30 rounded-[2.5rem] p-8 border border-white/60 dark:border-primary-800/50 shadow-inner relative group">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="bg-gradient-to-br from-primary-50/50 via-white/20 to-accent-50/50 dark:from-primary-900/20 dark:via-gray-900/10 dark:to-accent-900/20 rounded-[1.5rem] p-6 border border-white/40 dark:border-primary-800/30 shadow-inner relative group">
+                        <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-500/70 dark:text-primary-400/70">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-500/70 dark:text-primary-400/70">
                                     Your Identity
                                 </span>
                             </div>
                             <button
                                 onClick={handleCopyId}
-                                className="group/btn relative px-4 py-1.5 rounded-2xl bg-white dark:bg-gray-800 border border-primary-100 dark:border-primary-800 text-[10px] font-black uppercase tracking-widest text-primary-500 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm overflow-hidden"
+                                className="group/btn relative px-3 py-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 text-[9px] font-black uppercase tracking-widest text-primary-500 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm"
                             >
-                                <span className="relative z-10">{copied ? '✓ Copied' : '📋 Copy ID'}</span>
-                                <div className="absolute inset-0 bg-primary-50 dark:bg-primary-900/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
+                                <span>{copied ? '✓ Copied' : '📋 Copy ID'}</span>
                             </button>
                         </div>
 
-                        <div className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter mb-8 font-mono">
+                        <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-6 font-mono">
                             {userProfile?.userId || '------'}
                         </div>
 
-                        {/* Integrated Search Bar - Apple Style */}
+                        {/* Integrated Search Bar - Compact Apple Style */}
                         <div className="relative group/search">
-                            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                <svg className={`w-5 h-5 transition-colors duration-300 ${searching ? 'text-primary-500 animate-spin' : 'text-gray-400 group-focus-within/search:text-primary-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                <svg className={`w-4 h-4 transition-colors duration-300 ${searching ? 'text-primary-500 animate-spin' : 'text-gray-400 group-focus-within/search:text-primary-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
@@ -181,20 +180,17 @@ export default function AccountView({ user, onLogin, onLogout }) {
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                                     setSearchId(value);
-                                    if (value.length === 6 && value !== searchId) {
-                                        // Auto-search could go here or wait for enter
-                                    }
                                     setSearchResult(null);
                                 }}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                placeholder="Enter a 6-digit ID to find collaborators..."
+                                placeholder="Find collaborators..."
                                 maxLength={6}
-                                className="w-full pl-14 pr-6 py-5 rounded-3xl bg-white/60 dark:bg-black/20 backdrop-blur-xl border-2 border-transparent focus:border-primary-500/30 focus:bg-white dark:focus:bg-black/40 text-gray-900 dark:text-white font-bold tracking-tight shadow-lg shadow-black/5 transition-all duration-500 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+                                className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/70 dark:bg-black/30 backdrop-blur-xl border border-transparent focus:border-primary-500/30 focus:bg-white dark:focus:bg-black/50 text-gray-900 dark:text-white text-sm font-bold tracking-tight shadow-sm transition-all duration-500 placeholder:text-gray-400 outline-none"
                             />
                             {searchId.length === 6 && !searching && !searchResult && (
                                 <button
                                     onClick={handleSearch}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 px-4 rounded-2xl bg-primary-500 text-white text-xs font-black uppercase tracking-widest hover:bg-primary-600 active:scale-95 transition-all shadow-lg shadow-primary-500/20"
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 active:scale-95 transition-all"
                                 >
                                     Find
                                 </button>
@@ -203,15 +199,15 @@ export default function AccountView({ user, onLogin, onLogout }) {
 
                         {/* Search Result Peek */}
                         {searchResult && searchResult !== 'not_found' && (
-                            <div className="mt-4 p-4 rounded-3xl bg-white/80 dark:bg-gray-900/80 border border-primary-100 dark:border-primary-800 shadow-xl animate-scale-in flex items-center gap-4">
-                                <img src={searchResult.photoURL} className="w-12 h-12 rounded-2xl shadow-md" alt="" />
+                            <div className="mt-3 p-3 rounded-2xl bg-white/90 dark:bg-gray-900/90 border border-primary-100 dark:border-primary-800 shadow-xl animate-scale-in flex items-center gap-3">
+                                <img src={searchResult.photoURL} className="w-9 h-9 rounded-xl" alt="" />
                                 <div className="flex-1">
-                                    <p className="font-black text-gray-900 dark:text-white">{searchResult.displayName}</p>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID: {searchResult.userId}</p>
+                                    <p className="text-xs font-black text-gray-900 dark:text-white">{searchResult.displayName}</p>
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">ID: {searchResult.userId}</p>
                                 </div>
                                 <button
                                     onClick={() => setShowRequestModal(true)}
-                                    className="px-5 py-2.5 rounded-2xl bg-primary-500 text-white text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-primary-500/30 active:scale-95 transition-all"
+                                    className="px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[9px] font-black uppercase tracking-widest hover:shadow-lg active:scale-95 transition-all"
                                 >
                                     Connect
                                 </button>
@@ -219,30 +215,28 @@ export default function AccountView({ user, onLogin, onLogout }) {
                         )}
 
                         {searchResult === 'not_found' && (
-                            <div className="mt-4 p-4 rounded-3xl bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-center animate-shake">
-                                <p className="text-xs font-bold text-red-500">User not found with ID: {searchId}</p>
+                            <div className="mt-3 p-3 rounded-2xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 text-center">
+                                <p className="text-[10px] font-bold text-red-500">No user found with ID {searchId}</p>
                             </div>
                         )}
 
-                        {/* Collaborator Relationship List inside ID Card */}
                         <CollaboratorList user={user} />
                     </div>
                 </div>
-                <div className="h-4" />
             </div>
 
-            {/* Application Sections */}
+            {/* Management & Requests Sections */}
             <NotificationsSection user={user} />
             <PendingRequestsSection user={user} />
             <YourRequestsSection user={user} />
 
-            {/* Sign Out Card */}
-            <div className="card p-6 group">
+            {/* Standard Sign Out */}
+            <div className="flex justify-center pt-2">
                 <button
                     onClick={onLogout}
-                    className="w-full px-6 py-4 rounded-2xl border-2 border-red-100 dark:border-red-900/20 text-red-500 font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 hover:border-red-200 transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.98]"
+                    className="px-6 py-2.5 rounded-xl border border-red-100 dark:border-red-900/30 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 transition-all flex items-center gap-2 active:scale-95"
                 >
-                    <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                     Sign Out

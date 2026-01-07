@@ -51,7 +51,7 @@ export default function YourRequestsSection({ user }) {
     };
 
     return (
-        <div className="card p-6">
+        <div className="card p-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                 Your Requests
             </h3>
@@ -62,7 +62,7 @@ export default function YourRequestsSection({ user }) {
                     return (
                         <div
                             key={request.id}
-                            className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                            className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                         >
                             <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">

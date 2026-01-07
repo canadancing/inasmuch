@@ -94,7 +94,7 @@ export default function PendingRequestsSection({ user }) {
     }
 
     return (
-        <div className="card p-6">
+        <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                     Pending Requests
@@ -108,7 +108,7 @@ export default function PendingRequestsSection({ user }) {
                 {requests.map((request) => (
                     <div
                         key={request.id}
-                        className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                        className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                     >
                         <div className="flex items-start gap-3 mb-3">
                             <img

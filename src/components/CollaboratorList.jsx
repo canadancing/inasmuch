@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export default function CollaboratorList({ user }) {
@@ -28,7 +28,7 @@ export default function CollaboratorList({ user }) {
                     const data = docSnap.data();
                     const collabMap = data.collaborators || {};
 
-                    for (const [collabUid, role] of Object.entries(collabMap)) {
+                    for (const [collabUid, roleInfo] of Object.entries(collabMap)) {
                         if (processedUids.has(collabUid)) continue;
 
                         const userDoc = await getDoc(doc(db, 'users', collabUid));
@@ -38,8 +38,9 @@ export default function CollaboratorList({ user }) {
                                 uid: collabUid,
                                 displayName: userData.displayName,
                                 photoURL: userData.photoURL,
-                                role: role,
+                                role: typeof roleInfo === 'string' ? roleInfo : roleInfo.permission,
                                 type: 'guest',
+                                inventoryId: docSnap.id,
                                 inventoryName: data.name
                             });
                             processedUids.add(collabUid);
@@ -47,7 +48,6 @@ export default function CollaboratorList({ user }) {
                     }
                 }
 
-                // Initial set of collaborators
                 setCollaborators(prev => {
                     const hosts = prev.filter(c => c.type === 'host');
                     return [...hosts, ...guestList];
@@ -96,40 +96,96 @@ export default function CollaboratorList({ user }) {
         };
     }, [user]);
 
-    if (loading) return <div className="animate-pulse h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>;
+    const handleUpdateRole = async (collab, newRole) => {
+        try {
+            const inventoryRef = doc(db, 'inventories', collab.inventoryId);
+            await updateDoc(inventoryRef, {
+                [`collaborators.${collab.uid}.permission`]: newRole
+            });
+            alert(`Updated ${collab.displayName}'s access to ${newRole}`);
+        } catch (error) {
+            console.error("Error updating role:", error);
+            alert("Failed to update access");
+        }
+    };
+
+    const handleRemoveCollab = async (collab) => {
+        if (!confirm(`Remove ${collab.displayName}'s access to your inventory?`)) return;
+        try {
+            const inventoryRef = doc(db, 'inventories', collab.inventoryId);
+            await updateDoc(inventoryRef, {
+                [`collaborators.${collab.uid}`]: deleteField()
+            });
+            alert(`Removed ${collab.displayName}'s access`);
+        } catch (error) {
+            console.error("Error removing collaborator:", error);
+            alert("Failed to remove collaborator");
+        }
+    };
+
+    if (loading) return <div className="animate-pulse h-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl"></div>;
 
     if (collaborators.length === 0) {
         return (
-            <div className="text-center py-6 opacity-50 italic text-sm">
+            <div className="text-center py-4 opacity-40 text-xs font-medium">
                 No active collaborators found
             </div>
         );
     }
 
     return (
-        <div className="space-y-3 mt-6 pt-6 border-t border-primary-100 dark:border-primary-800">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary-500 dark:text-primary-400 mb-2">
+        <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <h4 className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500 mb-1 ml-1">
                 Active Collaborators
             </h4>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="space-y-1">
                 {collaborators.map((collab) => (
                     <div
-                        key={`${collab.uid} -${collab.type} `}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-white/40 dark:border-gray-700/50"
+                        key={`${collab.uid}-${collab.type}`}
+                        className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 hover:border-primary-200 dark:hover:border-primary-800 transition-colors"
                     >
                         <img
                             src={collab.photoURL}
                             alt=""
-                            className="w-8 h-8 rounded-lg shadow-sm"
+                            className="w-7 h-7 rounded-lg"
                         />
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
                                 {collab.displayName}
                             </p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-tight">
-                                {collab.type === 'guest' ? '👤 Guest' : '🏠 Host'} • {collab.role === 'edit' ? '✏️ Edit' : '👁️ View'} access
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tight">
+                                {collab.type === 'guest' ? '👤 Guest' : '🏠 Host'} • {collab.role === 'edit' ? '✏️ Edit' : '👁️ View'}
                             </p>
                         </div>
+
+                        {collab.type === 'guest' && (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => handleUpdateRole(collab, collab.role === 'edit' ? 'view' : 'edit')}
+                                    title={collab.role === 'edit' ? 'Downgrade to View' : 'Upgrade to Edit'}
+                                    className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-500 transition-colors"
+                                >
+                                    {collab.role === 'edit' ? (
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                        </svg>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => handleRemoveCollab(collab)}
+                                    title="Remove Access"
+                                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 transition-colors"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
