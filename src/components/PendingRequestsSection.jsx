@@ -1,6 +1,6 @@
 // Component for managing access requests (for inventory owners)
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, updateDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useInventory } from '../context/InventoryContext';
 
