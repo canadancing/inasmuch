@@ -14,20 +14,27 @@ export default function AdminView({
     isDark,
     permissions,
     isSuperAdmin,
-    onAddResident,
-    onUpdateResident,
-    onRemoveResident,
+    user,
+    role,
+    // Item actions
     onAddItem,
     onUpdateItem,
-    onRemoveItem,
+    onDeleteItem,
     onRestock,
+    // Resident actions
+    onAddResident,
+    onUpdateResident,
+    onDeleteResident,
+    // Log actions
     onDeleteLog,
     onUpdateLog,
+    // Icon actions
     customIcons,
-    onAddCustomIcon,
-    onUpdateCustomIcon,
-    onRemoveCustomIcon,
+    onAddIcon,
+    onUpdateIcon,
+    onDeleteIcon,
     customIconsMap,
+    // Tag actions
     tags,
     tagsMap,
     tagColors,
@@ -35,8 +42,8 @@ export default function AdminView({
     onUpdateTag,
     onRemoveTag,
     getTagStyles,
-    user,
-    isSuperAdmin,
+    // Admin actions
+    onRequestAdminAccess,
     onUpdateUserRole
 }) {
     const [activeTab, setActiveTab] = useState('history');
@@ -52,6 +59,7 @@ export default function AdminView({
     }
 
     // Role-based access control for tabs - Check inventory permissions!
+    // permissions.isOwner or permissions.canEdit allows access to Manage
     const canAccessManage = permissions?.isOwner || permissions?.canEdit || isSuperAdmin || (user && user.role === 'admin');
 
     return (
@@ -96,18 +104,21 @@ export default function AdminView({
                         items={items}
                         isDemo={isDemo}
                         isDark={isDark}
+                        // Harmonize props to match AdminPanel expectations
                         onAddResident={onAddResident}
                         onUpdateResident={onUpdateResident}
-                        onRemoveResident={onRemoveResident}
+                        onRemoveResident={onDeleteResident}
                         onAddItem={onAddItem}
                         onUpdateItem={onUpdateItem}
-                        onRemoveItem={onRemoveItem}
+                        onRemoveItem={onDeleteItem}
                         onRestock={onRestock}
+                        // Custom icon props
                         customIcons={customIcons}
-                        onAddCustomIcon={onAddCustomIcon}
-                        onUpdateCustomIcon={onUpdateCustomIcon}
-                        onRemoveCustomIcon={onRemoveCustomIcon}
+                        onAddCustomIcon={onAddIcon}
+                        onUpdateCustomIcon={onUpdateIcon}
+                        onRemoveCustomIcon={onDeleteIcon}
                         customIconsMap={customIconsMap}
+                        // Tag props
                         tags={tags}
                         tagsMap={tagsMap}
                         tagColors={tagColors}
@@ -120,7 +131,14 @@ export default function AdminView({
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="text-6xl mb-4">🔒</div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Restricted Access</h3>
-                        <p className="text-gray-500 max-w-xs">Only approved administrators can manage residents and items.</p>
+                        <p className="text-gray-500 max-w-xs px-6">
+                            Only the inventory owner or authorized editors can manage residents and items.
+                        </p>
+                        {permissions?.userId && !permissions?.canEdit && !permissions?.isOwner && (
+                            <p className="text-xs text-primary-500 mt-4">
+                                Current Role: Observer (View Only)
+                            </p>
+                        )}
                     </div>
                 )
             )}

@@ -24,14 +24,16 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         addResident,
         updateResident,
         deleteResident,
-        addLog
+        addLog,
+        restockItem
     } = useFirestore(user);
 
     const {
         customIcons,
         addCustomIcon,
         updateCustomIcon,
-        deleteCustomIcon
+        deleteCustomIcon,
+        customIconsMap
     } = useCustomIcons(user);
 
     const {
@@ -40,7 +42,8 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         addTag,
         updateTag,
         removeTag,
-        getTagStyles
+        getTagStyles,
+        tagsMap
     } = useTags();
 
     const pendingRequestsCount = usePendingRequestsCount(user);
@@ -115,22 +118,33 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         items={items}
                         residents={residents}
                         logs={logs}
+                        // Item props
                         onAddItem={addItem}
                         onUpdateItem={updateItem}
                         onDeleteItem={deleteItem}
+                        onRestock={restockItem}
+                        // Resident props
                         onAddResident={addResident}
                         onUpdateResident={updateResident}
                         onDeleteResident={deleteResident}
+                        // Log props
+                        onDeleteLog={() => { }} // Not implemented in useFirestore yet
+                        onUpdateLog={() => { }} // Not implemented in useFirestore yet
+                        // Icon props
                         customIcons={customIcons}
                         onAddIcon={addCustomIcon}
                         onUpdateIcon={updateCustomIcon}
                         onDeleteIcon={deleteCustomIcon}
+                        customIconsMap={customIconsMap}
+                        // Tag props
                         tags={tags}
+                        tagsMap={tagsMap}
                         tagColors={tagColors}
                         onAddTag={addTag}
                         onUpdateTag={updateTag}
                         onRemoveTag={removeTag}
                         getTagStyles={getTagStyles}
+                        // User/Auth props
                         user={user}
                         isAdmin={isAdmin}
                         isSuperAdmin={isSuperAdmin}

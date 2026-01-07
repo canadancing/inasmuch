@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
@@ -50,9 +50,11 @@ export default function AccountView({ user, onLogin, onLogout }) {
 
                     // Create default inventory if none exists
                     if (invSnapshot.empty) {
-                        console.log('Creating default inventory...');
+                        console.log('Creating default inventory with setDoc for stable ID...');
+                        // Use a stable, predictable ID format that matches what we'll expect in updates
                         const inventoryId = `inv_${user.uid}_${Date.now()}`;
-                        await addDoc(collection(db, 'inventories'), {
+
+                        await setDoc(doc(db, 'inventories', inventoryId), {
                             id: inventoryId,
                             ownerId: user.uid,
                             name: `${user.displayName || 'My'} Inventory`,
