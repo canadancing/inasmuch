@@ -8,10 +8,8 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
-import { useAuth } from './hooks/useAuth';
-import { InventoryProvider } from './context/InventoryContext';
 
-export default function App() {
+export default function App({ user, loading: authLoading, loginWithGoogle, logout, isAdmin }) {
     const [currentView, setCurrentView] = useState('stock');
     const { isDark, toggleTheme } = useTheme();
     const {
@@ -34,17 +32,6 @@ export default function App() {
         updateUserRole,
         users
     } = useFirestore();
-
-    const {
-        user,
-        role,
-        loading: authLoading,
-        loginWithGoogle,
-        logout,
-        isAdmin,
-        isSuperAdmin,
-        requestAdminAccess
-    } = useAuth();
 
     const {
         customIcons,
