@@ -18,6 +18,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         items,
         residents,
         logs,
+        auditLogs,
         addItem,
         updateItem,
         deleteItem,
@@ -174,7 +175,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                     if (item.isAction) {
                                         if (!user) {
                                             loginWithGoogle();
-                                        } else if (isAdmin) {
+                                        } else if (isAdmin || inventoryPermissions?.canEdit) {
                                             setShowLogModal(true);
                                         }
                                     } else {
