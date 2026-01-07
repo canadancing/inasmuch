@@ -141,8 +141,10 @@ export default function CollaboratorList({ user }) {
             const inventoryRef = doc(db, 'inventories', collab.inventoryId);
 
             // 1. Remove from inventory document
+            const { arrayRemove } = await import('firebase/firestore');
             await updateDoc(inventoryRef, {
-                [`collaborators.${collab.uid}`]: deleteField()
+                [`collaborators.${collab.uid}`]: deleteField(),
+                collaboratorUids: arrayRemove(collab.uid) // Remove from queryable array
             });
 
             // 2. Find and revoke the access request document

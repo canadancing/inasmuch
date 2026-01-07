@@ -81,12 +81,17 @@ export function InventoryProvider({ children, user }) {
         const qOwned = query(inventoriesRef, where('ownerId', '==', user.uid));
         const unsubOwned = onSnapshot(qOwned, () => loadInventories());
 
+        // Real-time listener for collaborated inventories (using collaboratorUids array)
+        const qCollaborated = query(inventoriesRef, where('collaboratorUids', 'array-contains', user.uid));
+        const unsubCollaborated = onSnapshot(qCollaborated, () => loadInventories());
+
         // Real-time listener for user profile (to detect nickname changes)
         const qUser = query(collection(db, 'users'), where('uid', '==', user.uid));
         const unsubUser = onSnapshot(qUser, () => loadInventories());
 
         return () => {
             unsubOwned();
+            unsubCollaborated();
             unsubUser();
         };
     }, [user, currentInventoryId]);

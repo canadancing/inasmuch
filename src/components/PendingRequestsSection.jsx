@@ -60,13 +60,15 @@ export default function PendingRequestsSection({ user }) {
             });
 
             // Add collaborator to inventory
+            const { arrayUnion } = await import('firebase/firestore');
             const inventoryRef = doc(db, 'inventories', inventoryId);
             await updateDoc(inventoryRef, {
                 [`collaborators.${request.requesterId}`]: {
                     permission: request.permission,
                     grantedAt: serverTimestamp(),
                     grantedBy: user.uid
-                }
+                },
+                collaboratorUids: arrayUnion(request.requesterId) // Add to queryable array
             });
 
             alert(`✅ Granted ${request.permission} access to ${request.requesterName}!`);

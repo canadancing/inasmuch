@@ -67,7 +67,19 @@ export default function NotificationsSection({ user }) {
         }
     };
 
-    if (notifications.length === 0) return null;
+    if (notifications.length === 0) {
+        return (
+            <div className="card p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                    <span>🔔</span> Recent Activity
+                </h3>
+                <div className="text-center py-8">
+                    <div className="text-5xl mb-3 opacity-30">📭</div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="card p-6 animate-fade-in">

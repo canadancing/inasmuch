@@ -174,9 +174,9 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 ) : null}
             </main>
 
-            {/* Bottom Nav - iOS Dock Style */}
-            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
+            {/* Bottom Nav - iOS Dock Style with Glassmorphism */}
+            <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+                <div className="flex items-center gap-1 px-3 py-2 bg-white/10 dark:bg-white/10 backdrop-blur-2xl rounded-full shadow-2xl border border-white/20">
                     {navItems.map((item) => {
                         const isActive = currentView === item.id;
                         return (
@@ -193,19 +193,19 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                         setCurrentView(item.id);
                                     }
                                 }}
-                                className="flex flex-col items-center justify-center px-8 py-2 rounded-2xl transition-all duration-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 relative"
+                                className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
                             >
                                 {/* Unified Notification Badge */}
                                 {item.id === 'account' && totalAccountNotifications > 0 && (
-                                    <div className="absolute -top-1 right-2 min-w-[24px] h-6 px-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-2xl border-[3px] border-white dark:border-gray-900 z-10 animate-pulse">
-                                        <span className="text-white text-[10px] font-black leading-none">
+                                    <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 z-10">
+                                        <span className="text-white text-[9px] font-black leading-none">
                                             {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
                                         </span>
                                     </div>
                                 )}
-                                <span className={`text-2xl mb-1 transition-all ${isActive ? 'scale-110' : 'opacity-60'
+                                <span className={`text-xl transition-all ${isActive ? 'scale-110' : 'opacity-70'
                                     }`}>{item.icon}</span>
-                                <span className={`text-[10px] font-semibold tracking-tight transition-all ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
+                                <span className={`text-[9px] font-bold tracking-tight transition-all mt-0.5 ${isActive ? 'text-white opacity-100' : 'text-white/60'
                                     }`}>{item.label}</span>
                             </button>
                         );

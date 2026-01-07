@@ -43,8 +43,20 @@ export default function YourRequestsSection({ user }) {
         }
     };
 
-    if (!user || requests.length === 0) {
-        return null;
+    if (!user) return null;
+
+    if (requests.length === 0) {
+        return (
+            <div className="card p-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                    Your Requests
+                </h3>
+                <div className="text-center py-8">
+                    <div className="text-5xl mb-3 opacity-30">📨</div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No sent requests</p>
+                </div>
+            </div>
+        );
     }
 
     const getStatusBadge = (status) => {
