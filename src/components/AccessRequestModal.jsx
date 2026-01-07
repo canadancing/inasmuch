@@ -64,7 +64,8 @@ export default function AccessRequestModal({ isOpen, onClose, targetUser, curren
         }
     };
 
-    if (!isOpen || !targetUser) return null;
+    if (!isOpen) return null;
+    if (!currentInventoryId && !targetUser) return null;
 
     return (
         <div

@@ -13,6 +13,7 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
+import AccessRequestModal from './components/AccessRequestModal';
 
 export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
     const [currentView, setCurrentView] = useState('stock');
@@ -60,6 +61,8 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [upgradeContext, setUpgradeContext] = useState(null);
 
     const navItems = [
         { id: 'stock', label: 'STOCK', icon: '📦' },
