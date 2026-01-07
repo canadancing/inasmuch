@@ -14,7 +14,7 @@ import {
     onAuthStateChanged,
     getRedirectResult,
     setPersistence,
-    browserLocalPersistence
+    browserSessionPersistence
 } from 'firebase/auth';
 import { generateUniqueUserId, generateInventoryId } from '../firebase/userIdUtils';
 
@@ -78,9 +78,9 @@ export function useAuth() {
                 }
             }
 
-            // Set persistence explicitly
+            // Set persistence explicitly to session (per tab)
             try {
-                await setPersistence(auth, browserLocalPersistence);
+                await setPersistence(auth, browserSessionPersistence);
             } catch (err) {
                 console.error('Failed to set auth persistence:', err);
             }

@@ -51,7 +51,7 @@ export function InventoryProvider({ children, user }) {
 
                 // Auto-select first inventory if none selected
                 if (!currentInventoryId && allInventories.length > 0) {
-                    const savedInventoryId = localStorage.getItem('currentInventoryId');
+                    const savedInventoryId = sessionStorage.getItem('currentInventoryId');
                     const inventoryToSelect = allInventories.find(inv => inv.id === savedInventoryId) || allInventories[0];
                     setCurrentInventoryId(inventoryToSelect.id);
                 }
@@ -86,7 +86,7 @@ export function InventoryProvider({ children, user }) {
             if (inventory) {
                 setCurrentInventory(inventory);
                 setPermissions(calculatePermissions(inventory, user.uid));
-                localStorage.setItem('currentInventoryId', currentInventoryId);
+                sessionStorage.setItem('currentInventoryId', currentInventoryId);
             }
         }
     }, [currentInventoryId, inventories, user]);
