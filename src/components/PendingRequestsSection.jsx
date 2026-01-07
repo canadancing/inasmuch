@@ -52,24 +52,51 @@ export default function PendingRequestsSection({ user }) {
             const inventoryToShare = snapshot.docs[0];
             const inventoryId = inventoryToShare.id;
 
-            // Update request status
-            await updateDoc(doc(db, 'accessRequests', request.id), {
+            // Update request status and add collaborator using batch
+            const { arrayUnion, writeBatch } = await import('firebase/firestore');
+            const batch = writeBatch(db);
+
+            // 1. Update request status
+            const requestRef = doc(db, 'accessRequests', request.id);
+            batch.update(requestRef, {
                 status: 'approved',
                 respondedAt: serverTimestamp(),
-                inventoryId: inventoryId  // Store which inventory was shared
+                inventoryId: inventoryId
             });
 
-            // Add collaborator to inventory
-            const { arrayUnion } = await import('firebase/firestore');
+            // 2. Add collaborator to inventory
             const inventoryRef = doc(db, 'inventories', inventoryId);
-            await updateDoc(inventoryRef, {
+            batch.update(inventoryRef, {
                 [`collaborators.${request.requesterId}`]: {
                     permission: request.permission,
                     grantedAt: serverTimestamp(),
                     grantedBy: user.uid
                 },
-                collaboratorUids: arrayUnion(request.requesterId) // Add to queryable array
+                collaboratorUids: arrayUnion(request.requesterId)
             });
+
+            // 3. Create notification for requester
+            const notificationsRef = collection(db, 'notifications');
+            const requesterNotifRef = doc(notificationsRef);
+            batch.set(requesterNotifRef, {
+                targetUid: request.requesterId,
+                type: 'access_granted',
+                message: `${user.displayName} approved your request to access their inventory.`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            // 4. Create notification for owner (activity log)
+            const ownerNotifRef = doc(notificationsRef);
+            batch.set(ownerNotifRef, {
+                targetUid: user.uid,
+                type: 'request_approved',
+                message: `You approved ${request.requesterName}'s request for ${request.permission} access.`,
+                read: true,
+                createdAt: serverTimestamp()
+            });
+
+            await batch.commit();
 
             alert(`✅ Granted ${request.permission} access to ${request.requesterName}!`);
         } catch (error) {

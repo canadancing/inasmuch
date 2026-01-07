@@ -119,7 +119,8 @@ export function InventoryProvider({ children, user }) {
             currentInventoryId,
             permissions,
             switchInventory,
-            loading
+            loading,
+            user
         }}>
             {children}
         </InventoryContext.Provider>

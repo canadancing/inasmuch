@@ -4,7 +4,7 @@ import { useInventory } from '../context/InventoryContext';
 import InventoryNicknameModal from './InventoryNicknameModal';
 
 export default function InventorySwitcher() {
-    const { inventories, currentInventoryId, switchInventory, currentInventory, permissions } = useInventory();
+    const { inventories, currentInventoryId, switchInventory, currentInventory, permissions, user } = useInventory();
     const [renameInventory, setRenameInventory] = useState(null);
 
     if (!inventories || inventories.length === 0) {
@@ -118,7 +118,7 @@ export default function InventorySwitcher() {
             <InventoryNicknameModal
                 isOpen={!!renameInventory}
                 onClose={() => setRenameInventory(null)}
-                inventory={renameInventory ? { ...renameInventory, userId: permissions?.userId } : null}
+                inventory={renameInventory ? { ...renameInventory, userId: user?.uid } : null}
                 onSuccess={() => {
                     // Inventory list will auto-refresh via real-time listener
                 }}
