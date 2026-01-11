@@ -131,12 +131,12 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
         <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-500">
             {/* Header with Branding and Theme Toggle - iOS Glass Effect */}
             <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-xl shadow-lg">
                             I
                         </div>
-                        <div>
+                        <div className="hidden sm:block">
                             <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
                                 INASMUCH
                             </h1>
@@ -146,9 +146,10 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         </div>
                     </div>
 
-                    {user && <InventorySwitcher />}
-
-                    <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
+                    <div className="flex items-center gap-2 min-w-0">
+                        {user && <div className="min-w-0 flex-shrink"><InventorySwitcher /></div>}
+                        <div className="flex-shrink-0"><ThemeToggle isDark={isDark} onToggle={toggleTheme} /></div>
+                    </div>
                 </div>
             </header>
 
@@ -303,6 +304,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 isOpen={showRestockModal}
                 onClose={() => setShowRestockModal(false)}
                 items={items}
+                residents={residents}
                 onRestock={restockItem}
                 setCurrentView={setCurrentView}
                 user={user}

@@ -1,33 +1,46 @@
 // Modal for restocking items quickly
 import { useState, useEffect, useRef } from 'react';
 
-export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView }) {
+export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView, residents }) {
+    const [selectedPerson, setSelectedPerson] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
+    const [personSearch, setPersonSearch] = useState('');
     const [showItemDropdown, setShowItemDropdown] = useState(false);
+    const [showPersonDropdown, setShowPersonDropdown] = useState(false);
+    const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Ref for click-outside detection
+    // Refs for click-outside detection
     const itemDropdownRef = useRef(null);
+    const personDropdownRef = useRef(null);
 
-    // Filtered items
+
+    // Filtered items and persons
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(itemSearch.toLowerCase())
     );
 
-    // Close dropdown when clicking outside
+    const filteredPersons = (residents || []).filter(person =>
+        `${person.firstName} ${person.lastName} ${person.room}`.toLowerCase().includes(personSearch.toLowerCase())
+    );
+
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
                 setShowItemDropdown(false);
             }
+            if (personDropdownRef.current && !personDropdownRef.current.contains(event.target)) {
+                setShowPersonDropdown(false);
+            }
         };
 
         if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('mousedown', handleClickOutside, true);
         }
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('mousedown', handleClickOutside, true);
         };
     }, [isOpen]);
 
@@ -61,18 +74,33 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
     };
 
     const handleSubmit = async () => {
-        if (selectedItems.length === 0) return;
+        if (!selectedPerson || selectedItems.length === 0) return;
 
         setIsSubmitting(true);
         try {
+            const [year, month, day] = restockDate.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (restockDate === todayStr) {
+                const now = new Date();
+                dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
+                dateObj.setHours(12, 0, 0, 0);
+            }
+
+            const personName = `${selectedPerson.firstName || ''} ${selectedPerson.lastName || ''}`.trim() || selectedPerson.name || 'Unknown';
+
             // Restock each item
             for (const { item, quantity } of selectedItems) {
-                await onRestock(item.id, quantity);
+                await onRestock(item.id, item.name, quantity, selectedPerson.id, personName, dateObj);
             }
 
             // Reset and close
+            setSelectedPerson(null);
             setSelectedItems([]);
             setItemSearch('');
+            setPersonSearch('');
+            setRestockDate(new Date().toISOString().split('T')[0]);
             onClose();
         } catch (error) {
             console.error('Error restocking items:', error);
@@ -107,6 +135,89 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
 
                 {/* Content */}
                 <div className="p-6 space-y-6">
+                    {/* Person Selection with Search */}
+                    <div className="relative" ref={personDropdownRef}>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
+                            WHO IS RESTOCKING?
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={selectedPerson ? `${selectedPerson.firstName} ${selectedPerson.lastName}` : personSearch}
+                                onChange={(e) => {
+                                    setPersonSearch(e.target.value);
+                                    setShowPersonDropdown(true);
+                                    setShowItemDropdown(false);
+                                    setSelectedPerson(null);
+                                }}
+                                onFocus={() => {
+                                    setShowPersonDropdown(true);
+                                    setShowItemDropdown(false);
+                                }}
+                                placeholder="Search people..."
+                                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-emerald-500 focus:ring-0 transition-colors"
+                            />
+                            {showPersonDropdown && (
+                                <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                    {filteredPersons.length > 0 ? filteredPersons.map((person) => (
+                                        <button
+                                            key={person.id}
+                                            onClick={() => {
+                                                setSelectedPerson(person);
+                                                setShowPersonDropdown(false);
+                                                setPersonSearch('');
+                                            }}
+                                            className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <div className="font-semibold text-gray-900 dark:text-white">
+                                                    {person.firstName} {person.lastName}
+                                                </div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {person.room}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )) : (
+                                        <div className="p-6 text-center">
+                                            <div className="text-3xl mb-2">👤</div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                No people found
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    setCurrentView?.('admin');
+                                                }}
+                                                className="px-4 py-2 text-sm font-semibold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                                            >
+                                                ➕ Add People
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        {selectedPerson && (
+                            <div className="mt-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                                <div>
+                                    <div className="font-semibold text-emerald-900 dark:text-emerald-100">
+                                        {selectedPerson.firstName} {selectedPerson.lastName}
+                                    </div>
+                                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                                        {selectedPerson.room}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedPerson(null)}
+                                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Item Selection with Search */}
                     <div className="relative" ref={itemDropdownRef}>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
@@ -194,9 +305,16 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                                             >
                                                 -
                                             </button>
-                                            <span className="w-8 text-center font-bold text-gray-900 dark:text-white">
-                                                +{quantity}
-                                            </span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={quantity}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 1;
+                                                    handleQuantityChange(item.id, val);
+                                                }}
+                                                className="w-16 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 focus:border-emerald-500 focus:ring-0"
+                                            />
                                             <button
                                                 onClick={() => handleQuantityChange(item.id, quantity + 1)}
                                                 className="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center font-bold transition-colors"
@@ -209,6 +327,20 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                             </div>
                         </div>
                     )}
+
+                    {/* Date Selection */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
+                            Restock Date
+                        </label>
+                        <input
+                            type="date"
+                            value={restockDate}
+                            onChange={(e) => setRestockDate(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-emerald-500 focus:ring-0 transition-colors"
+                        />
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -221,8 +353,8 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={selectedItems.length === 0 || isSubmitting}
-                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${selectedItems.length === 0 || isSubmitting
+                        disabled={!selectedPerson || selectedItems.length === 0 || isSubmitting}
+                        className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all ${!selectedPerson || selectedItems.length === 0 || isSubmitting
                             ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                             : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'
                             }`}

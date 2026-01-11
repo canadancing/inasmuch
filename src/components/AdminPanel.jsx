@@ -621,18 +621,18 @@ export default function AdminPanel({
     return (
         <div className="space-y-6">
             {/* Tab Navigation */}
-            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl overflow-x-auto">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${activeTab === tab.id
+                        className={`flex-1 min-w-[60px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${activeTab === tab.id
                             ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
                             : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         <span>{tab.icon}</span>
-                        <span>{tab.label}</span>
+                        <span className="hidden sm:inline whitespace-nowrap">{tab.label}</span>
                     </button>
                 ))}
             </div>

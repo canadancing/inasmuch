@@ -154,7 +154,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                     {/* Resident Selection with Search */}
                     <div className="relative" ref={residentDropdownRef}>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                            Resident
+                            Person
                         </label>
                         <div className="relative">
                             <input
@@ -167,7 +167,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                     setSelectedResident(null);
                                 }}
                                 onFocus={handleResidentFocus}
-                                placeholder="Search residents..."
+                                placeholder="Search people..."
                                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors"
                             />
                             {showResidentDropdown && (
@@ -195,7 +195,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                         <div className="p-6 text-center">
                                             <div className="text-3xl mb-2">👤</div>
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                                No residents found
+                                                No people found
                                             </p>
                                             <button
                                                 onClick={() => {
@@ -204,7 +204,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                                 }}
                                                 className="px-4 py-2 text-sm font-semibold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
                                             >
-                                                ➕ Add Residents
+                                                ➕ Add People
                                             </button>
                                         </div>
                                     )}
@@ -319,9 +319,16 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                             >
                                                 -
                                             </button>
-                                            <span className="w-8 text-center font-bold text-gray-900 dark:text-white">
-                                                {quantity}
-                                            </span>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={quantity}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 1;
+                                                    handleQuantityChange(item.id, val);
+                                                }}
+                                                className="w-16 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 focus:border-primary-500 focus:ring-0"
+                                            />
                                             <button
                                                 onClick={() => handleQuantityChange(item.id, quantity + 1)}
                                                 className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center font-bold transition-colors"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ItemGrid from '../components/ItemGrid';
 
 export default function ResidentView({
@@ -8,16 +8,36 @@ export default function ResidentView({
     isAdmin,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [displayMode, setDisplayMode] = useState(() => {
+        return localStorage.getItem('stockDisplayMode') || 'grid';
+    });
+    const [stockFilter, setStockFilter] = useState('all'); // 'all', 'low', 'out'
 
-    // Filter items based on search query
+
+    // Persist display mode to localStorage
+    useEffect(() => {
+        localStorage.setItem('stockDisplayMode', displayMode);
+    }, [displayMode]);
+
+    // Filter items based on search query and stock filter
     const filteredItems = items.filter(item => {
-        if (!searchQuery.trim()) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            item.name?.toLowerCase().includes(query) ||
-            item.location?.toLowerCase().includes(query) ||
-            item.tags?.some(tag => tag.toLowerCase().includes(query))
-        );
+        // Search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = item.name?.toLowerCase().includes(query) ||
+                item.location?.toLowerCase().includes(query) ||
+                item.tags?.some(tag => tag.toLowerCase().includes(query));
+            if (!matchesSearch) return false;
+        }
+
+        // Stock level filter
+        if (stockFilter === 'low') {
+            return item.currentStock > 0 && item.currentStock <= item.minStock;
+        } else if (stockFilter === 'out') {
+            return item.currentStock === 0;
+        }
+
+        return true;
     });
 
     if (loading) {
@@ -35,6 +55,68 @@ export default function ResidentView({
         <div className="flex flex-col h-full">
             {/* Inventory Grid */}
             <div className="flex-1 overflow-y-auto">
+                {/* Filter and Display Controls */}
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                    {/* Stock Filter Buttons */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setStockFilter('all')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${stockFilter === 'all'
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            All Items
+                        </button>
+                        <button
+                            onClick={() => setStockFilter('low')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${stockFilter === 'low'
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            Low Stock
+                        </button>
+                        <button
+                            onClick={() => setStockFilter('out')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${stockFilter === 'out'
+                                ? 'bg-red-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            Out of Stock
+                        </button>
+                    </div>
+
+                    {/* Display Mode Toggle */}
+                    <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                        <button
+                            onClick={() => setDisplayMode('grid')}
+                            className={`p-2 rounded transition-colors ${displayMode === 'grid'
+                                ? 'bg-white dark:bg-gray-900 text-primary-500'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                }`}
+                            title="Grid View"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => setDisplayMode('list')}
+                            className={`p-2 rounded transition-colors ${displayMode === 'list'
+                                ? 'bg-white dark:bg-gray-900 text-primary-500'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                }`}
+                            title="List View"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Current Inventory
@@ -85,7 +167,7 @@ export default function ResidentView({
                                 </div>
                             )}
                             <div className="text-xs text-gray-400 dark:text-gray-500">
-                                {filteredItems.length} {filteredItems.length === items.length ? 'items' : `of ${items.length}`}
+                                {filteredItems.length} {filteredItems.length === items.length ? 'items' : `of ${items.length} `}
                             </div>
                         </div>
                     </div>
@@ -104,6 +186,7 @@ export default function ResidentView({
                         selectedItem={null}
                         onSelectItem={() => { }}
                         showStockOnly={true}
+                        displayMode={displayMode}
                     />
                 )}
             </div>

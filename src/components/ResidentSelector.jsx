@@ -21,11 +21,11 @@ export default function ResidentSelector({ residents, selectedResident, onSelect
                             : '?'}
                     </div>
                     <div className="text-left">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-primary-500 dark:text-primary-400 mb-0.5">Logging as</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary-500 dark:text-primary-400 mb-0.5">Logged by</p>
                         <p className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
                             {selectedResident
                                 ? `${selectedResident.firstName || ''} ${selectedResident.lastName || ''}`.trim() || selectedResident.name || 'Unknown'
-                                : 'Choose Resident'}
+                                : 'Select Person'}
                         </p>
                     </div>
                 </div>
@@ -52,7 +52,7 @@ export default function ResidentSelector({ residents, selectedResident, onSelect
                         {residents.length === 0 ? (
                             <div className="p-8 text-center">
                                 <span className="text-4xl block mb-2">👋</span>
-                                <p className="text-gray-500 dark:text-gray-400 font-bold tracking-tight">No residents found</p>
+                                <p className="text-gray-500 dark:text-gray-400 font-bold tracking-tight">No people found</p>
                             </div>
                         ) : (
                             residents.map((resident) => {
