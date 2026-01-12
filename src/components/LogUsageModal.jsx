@@ -314,24 +314,35 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => handleQuantityChange(item.id, quantity - 1)}
-                                                className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center font-bold transition-colors"
+                                                onClick={() => handleQuantityChange(item.id, Math.max(1, quantity - 1))}
+                                                className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center font-bold text-lg transition-colors"
                                             >
-                                                -
+                                                −
                                             </button>
                                             <input
-                                                type="number"
-                                                min="1"
+                                                type="text"
+                                                inputMode="numeric"
                                                 value={quantity}
                                                 onChange={(e) => {
-                                                    const val = parseInt(e.target.value) || 1;
-                                                    handleQuantityChange(item.id, val);
+                                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                                    if (val === '') {
+                                                        handleQuantityChange(item.id, 1);
+                                                    } else {
+                                                        const numVal = parseInt(val);
+                                                        if (numVal > 0 && numVal <= 9999) {
+                                                            handleQuantityChange(item.id, numVal);
+                                                        }
+                                                    }
                                                 }}
-                                                className="w-16 text-center font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 focus:border-primary-500 focus:ring-0"
+                                                onBlur={() => {
+                                                    if (quantity < 1) handleQuantityChange(item.id, 1);
+                                                }}
+                                                className="w-20 text-center font-bold text-xl text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all cursor-text"
+                                                placeholder="1"
                                             />
                                             <button
                                                 onClick={() => handleQuantityChange(item.id, quantity + 1)}
-                                                className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center font-bold transition-colors"
+                                                className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center font-bold text-lg transition-colors"
                                             >
                                                 +
                                             </button>
