@@ -270,11 +270,15 @@ export function useFirestore(user) {
         }
 
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
-        await updateDoc(itemDocRef, {
+        const updateData = {
             ...updates,
             updatedAt: serverTimestamp(),
-            updatedBy: user?.uid
-        });
+        };
+        if (user?.uid) {
+            updateData.updatedBy = user.uid;
+        }
+
+        await updateDoc(itemDocRef, updateData);
 
         // Log this action in Audit Trail
         const itemName = updates.name || items.find(i => i.id === itemId)?.name || 'Item';
