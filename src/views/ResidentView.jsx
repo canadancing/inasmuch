@@ -36,6 +36,11 @@ export default function ResidentView({
         await updateItem(itemId, { hidden: true });
     };
 
+    const handleItemClick = (item) => {
+        setSelectedRestockItem(item);
+        setShowRestockModal(true);
+    };
+
 
     // Persist display mode to localStorage
     useEffect(() => {
