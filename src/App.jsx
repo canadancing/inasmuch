@@ -242,7 +242,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                 key={item.id}
                                 onClick={() => {
                                     if (item.isAction) {
-                                        // LOG or RESTOCK action
+                                        // LOG action
                                         if (!user) {
                                             loginWithGoogle();
                                         } else if (item.id === 'log') {
@@ -252,46 +252,43 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                                 setUpgradeContext({ action: 'LOG' });
                                                 setShowUpgradeModal(true);
                                             }
-                                            setUpgradeContext({ action: 'RESTOCK' });
-                                            setShowUpgradeModal(true);
                                         }
-                                    }
-                                } else {
+                                    } else {
                                         setCurrentView(item.id);
-                    }
+                                    }
                                 }}
-                    className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
+                                className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
                             >
-                    {/* Unified Notification Badge */}
-                    {item.id === 'account' && totalAccountNotifications > 0 && (
-                        <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 z-10">
-                            <span className="text-white text-[9px] font-black leading-none">
-                                {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
-                            </span>
-                        </div>
-                    )}
-                    <NavIcon type={item.id} isActive={isActive} />
-                    <span className={`text-[9px] font-bold tracking-tight transition-all mt-0.5 ${isActive ? 'text-white opacity-100' : 'text-white/60'
-                        }`}>{item.label}</span>
-                </button>
-                );
+                                {/* Unified Notification Badge */}
+                                {item.id === 'account' && totalAccountNotifications > 0 && (
+                                    <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 z-10">
+                                        <span className="text-white text-[9px] font-black leading-none">
+                                            {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
+                                        </span>
+                                    </div>
+                                )}
+                                <NavIcon type={item.id} isActive={isActive} />
+                                <span className={`text-[9px] font-bold tracking-tight transition-all mt-0.5 ${isActive ? 'text-white opacity-100' : 'text-white/60'
+                                    }`}>{item.label}</span>
+                            </button>
+                        );
                     })}
-        </div>
+                </div>
             </nav >
 
-        {/* Log Usage Modal */ }
-        < LogUsageModal
-    isOpen = { showLogModal }
-    onClose = {() => setShowLogModal(false)
-}
-residents = { residents }
-items = { items }
-onLog = {(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
-setCurrentView = { setCurrentView }
-user = { user }
-    />
+            {/* Log Usage Modal */}
+            < LogUsageModal
+                isOpen={showLogModal}
+                onClose={() => setShowLogModal(false)
+                }
+                residents={residents}
+                items={items}
+                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+                setCurrentView={setCurrentView}
+                user={user}
+            />
 
-    {/* Restock Modal */ }
+            {/* Restock Modal */}
         </div >
     );
 }
