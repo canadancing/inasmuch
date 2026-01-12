@@ -54,7 +54,7 @@ export default function InventorySwitcher() {
 
     return (
         <>
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
                 <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -71,6 +71,19 @@ export default function InventorySwitcher() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
+
+                {/* Quick Edit Button */}
+                {currentInventory && (
+                    <button
+                        onClick={() => setRenameInventory(currentInventory)}
+                        className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+                        title="Edit inventory name"
+                    >
+                        <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                )}
 
                 {/* Dropdown */}
                 {dropdownOpen && (
