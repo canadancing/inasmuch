@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import ItemGrid from '../components/ItemGrid';
+import RestockModal from '../components/RestockModal';
 
 export default function ResidentView({
     items,
     loading,
     isDemo,
     isAdmin,
+    residents,
+    onRestock,
+    setCurrentView,
+    user,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [displayMode, setDisplayMode] = useState(() => {
@@ -17,6 +22,8 @@ export default function ResidentView({
         return saved ? JSON.parse(saved) : [];
     });
     const [showItemSelector, setShowItemSelector] = useState(false);
+    const [showRestockModal, setShowRestockModal] = useState(false);
+    const [selectedRestockItem, setSelectedRestockItem] = useState(null);
 
 
     // Persist display mode to localStorage
@@ -248,12 +255,6 @@ export default function ResidentView({
 
                         {/* Status badges */}
                         <div className="flex items-center gap-3">
-                            {!isAdmin && (
-                                <div className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Read Only</span>
-                                </div>
-                            )}
                             {isDemo && (
                                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/30">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -277,13 +278,32 @@ export default function ResidentView({
                 ) : (
                     <ItemGrid
                         items={filteredItems}
-                        selectedItem={null}
-                        onSelectItem={() => { }}
+                        selectedItem={selectedRestockItem}
+                        onSelectItem={(item) => {
+                            setSelectedRestockItem(item);
+                            setShowRestockModal(true);
+                        }}
                         showStockOnly={true}
                         displayMode={displayMode}
                     />
                 )}
             </div>
+
+            {/* Restock Modal */}
+            {selectedRestockItem && (
+                <RestockModal
+                    isOpen={showRestockModal}
+                    onClose={() => {
+                        setShowRestockModal(false);
+                        setSelectedRestockItem(null);
+                    }}
+                    items={[selectedRestockItem]}
+                    residents={residents}
+                    onRestock={onRestock}
+                    setCurrentView={setCurrentView}
+                    user={user}
+                />
+            )}
         </div>
     );
 }

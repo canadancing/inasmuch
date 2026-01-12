@@ -13,7 +13,6 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import LogUsageModal from './components/LogUsageModal';
-import RestockModal from './components/RestockModal';
 import AccessRequestModal from './components/AccessRequestModal';
 import SuperAdminView from './views/SuperAdminView';
 import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
@@ -64,7 +63,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const { permissions: inventoryPermissions } = useInventory();
 
     const [showLogModal, setShowLogModal] = useState(false);
-    const [showRestockModal, setShowRestockModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeContext, setUpgradeContext] = useState(null);
 
@@ -82,12 +80,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                 return (
                     <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                    </svg>
-                );
-            case 'restock':
-                return (
-                    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                 );
             case 'admin':
@@ -118,7 +110,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     const baseNavItems = [
         { id: 'stock', label: 'STOCK' },
         { id: 'log', label: 'LOG', isAction: true },
-        { id: 'restock', label: 'RESTOCK', isAction: true },
         { id: 'admin', label: 'ADMIN' },
         { id: 'account', label: 'ACCOUNT' },
     ];
@@ -177,6 +168,10 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                     <ResidentView
                         items={items}
                         residents={residents}
+                        loading={loading}
+                        isDemo={!user}
+                        isAdmin={isAdmin}
+                        onRestock={restockItem}
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
                         setCurrentView={setCurrentView}
                         customIcons={customIcons}
@@ -257,58 +252,46 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                                                 setUpgradeContext({ action: 'LOG' });
                                                 setShowUpgradeModal(true);
                                             }
-                                        } else if (item.id === 'restock') {
-                                            if (inventoryPermissions?.canEdit) {
-                                                setShowRestockModal(true);
-                                            } else if (inventoryPermissions?.canView) {
-                                                setUpgradeContext({ action: 'RESTOCK' });
-                                                setShowUpgradeModal(true);
-                                            }
+                                            setUpgradeContext({ action: 'RESTOCK' });
+                                            setShowUpgradeModal(true);
                                         }
-                                    } else {
-                                        setCurrentView(item.id);
                                     }
+                                } else {
+                                        setCurrentView(item.id);
+                    }
                                 }}
-                                className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
+                    className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
                             >
-                                {/* Unified Notification Badge */}
-                                {item.id === 'account' && totalAccountNotifications > 0 && (
-                                    <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 z-10">
-                                        <span className="text-white text-[9px] font-black leading-none">
-                                            {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
-                                        </span>
-                                    </div>
-                                )}
-                                <NavIcon type={item.id} isActive={isActive} />
-                                <span className={`text-[9px] font-bold tracking-tight transition-all mt-0.5 ${isActive ? 'text-white opacity-100' : 'text-white/60'
-                                    }`}>{item.label}</span>
-                            </button>
-                        );
+                    {/* Unified Notification Badge */}
+                    {item.id === 'account' && totalAccountNotifications > 0 && (
+                        <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg border-2 border-white/50 z-10">
+                            <span className="text-white text-[9px] font-black leading-none">
+                                {totalAccountNotifications > 9 ? '9+' : totalAccountNotifications}
+                            </span>
+                        </div>
+                    )}
+                    <NavIcon type={item.id} isActive={isActive} />
+                    <span className={`text-[9px] font-bold tracking-tight transition-all mt-0.5 ${isActive ? 'text-white opacity-100' : 'text-white/60'
+                        }`}>{item.label}</span>
+                </button>
+                );
                     })}
-                </div>
-            </nav>
-
-            {/* Log Usage Modal */}
-            <LogUsageModal
-                isOpen={showLogModal}
-                onClose={() => setShowLogModal(false)}
-                residents={residents}
-                items={items}
-                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
-                setCurrentView={setCurrentView}
-                user={user}
-            />
-
-            {/* Restock Modal */}
-            <RestockModal
-                isOpen={showRestockModal}
-                onClose={() => setShowRestockModal(false)}
-                items={items}
-                residents={residents}
-                onRestock={restockItem}
-                setCurrentView={setCurrentView}
-                user={user}
-            />
         </div>
+            </nav >
+
+        {/* Log Usage Modal */ }
+        < LogUsageModal
+    isOpen = { showLogModal }
+    onClose = {() => setShowLogModal(false)
+}
+residents = { residents }
+items = { items }
+onLog = {(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+setCurrentView = { setCurrentView }
+user = { user }
+    />
+
+    {/* Restock Modal */ }
+        </div >
     );
 }
