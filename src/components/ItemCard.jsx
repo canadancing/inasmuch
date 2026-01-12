@@ -18,9 +18,18 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
 
     if (showStockOnly) {
         return (
-            <div className="card p-6 flex flex-col items-center gap-4">
+            <button
+                onClick={() => onSelect(item)}
+                className="card-interactive p-6 flex flex-col items-center gap-4 relative group transition-all duration-300 hover:scale-105"
+            >
                 {content}
-            </div>
+                {/* Restock Button Indicator */}
+                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </div>
+            </button>
         );
     }
 
