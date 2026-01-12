@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useInventory } from '../hooks/useInventory';
+import { useInventory } from '../context/InventoryContext';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
 import YourRequestsSection from '../components/YourRequestsSection';
