@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useInventory } from '../hooks/useInventory';
 import AccessRequestModal from '../components/AccessRequestModal';
 import PendingRequestsSection from '../components/PendingRequestsSection';
 import YourRequestsSection from '../components/YourRequestsSection';
 import NotificationsSection from '../components/NotificationsSection';
 import CollaboratorList from '../components/CollaboratorList';
 import DataManagement from '../components/DataManagement';
+import InventoryNicknameModal from '../components/InventoryNicknameModal';
 
 export default function AccountView({ user, onLogin, onLogout }) {
+    const { currentInventory } = useInventory();
     const [userProfile, setUserProfile] = useState(null);
     const [searchId, setSearchId] = useState('');
     const [searchResult, setSearchResult] = useState(null);
     const [searching, setSearching] = useState(false);
     const [copied, setCopied] = useState(false);
     const [showRequestModal, setShowRequestModal] = useState(false);
+    const [showNicknameModal, setShowNicknameModal] = useState(false);
 
     // Fetch user profile with userId AND ensure inventory exists
     useEffect(() => {
@@ -225,6 +229,32 @@ export default function AccountView({ user, onLogin, onLogout }) {
                     </div>
                 </div>
             </div>
+
+            {/* Inventory Nickname Section */}
+            {currentInventory && currentInventory.isOwner && (
+                <div className="card p-6 rounded-[2rem]">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white">Inventory Display Name</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Customize how your inventory appears to collaborators
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowNicknameModal(true)}
+                            className="px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-bold hover:bg-primary-600 transition-colors"
+                        >
+                            Edit
+                        </button>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                        <div className="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Current Display Name</div>
+                        <div className="text-lg font-black text-gray-900 dark:text-white">
+                            {currentInventory.nickname || `${currentInventory.ownerName || 'My'} Inventory`}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Management & Requests Sections */}
             <NotificationsSection user={user} />

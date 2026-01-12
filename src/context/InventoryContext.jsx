@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
@@ -118,6 +118,22 @@ export function InventoryProvider({ children, user }) {
         setCurrentInventoryId(id);
     };
 
+    const updateInventoryNickname = async (inventoryId, nickname) => {
+        if (!user) return;
+
+        try {
+            const inventoryRef = doc(db, 'inventories', inventoryId);
+            await updateDoc(inventoryRef, {
+                nickname: nickname || null,
+                updatedAt: serverTimestamp()
+            });
+        } catch (error) {
+            console.error('Error updating inventory nickname:', error);
+            throw error;
+        }
+    };
+
+
     return (
         <InventoryContext.Provider value={{
             inventories,
@@ -125,6 +141,7 @@ export function InventoryProvider({ children, user }) {
             currentInventoryId,
             permissions,
             switchInventory,
+            updateInventoryNickname,
             loading,
             user
         }}>
