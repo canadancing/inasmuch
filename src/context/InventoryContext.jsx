@@ -98,6 +98,12 @@ export function InventoryProvider({ children, user }) {
 
     // Update current inventory and permissions when selection changes
     useEffect(() => {
+        if (!user) {
+            setCurrentInventory(null);
+            setPermissions(null);
+            return;
+        }
+
         if (currentInventoryId && inventories.length > 0) {
             const inventory = inventories.find(inv => inv.id === currentInventoryId);
             if (inventory) {
