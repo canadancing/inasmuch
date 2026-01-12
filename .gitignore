@@ -39,3 +39,4 @@ obj/
 # OS specific files
 Thumbs.db
 Desktop.ini
+.vercel
