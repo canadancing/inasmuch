@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ItemGrid from '../components/ItemGrid';
 import RestockModal from '../components/RestockModal';
+import { useFirestore } from '../hooks/useFirestore';
 
 export default function ResidentView({
     items,
@@ -17,7 +18,9 @@ export default function ResidentView({
         return localStorage.getItem('stockDisplayMode') || 'grid';
     });
     const [stockFilter, setStockFilter] = useState('all');
-    const [showHidden, setShowHidden] = useState(false); // 'all', 'low', 'out'
+    const [showHidden, setShowHidden] = useState(false);
+    const [sortBy, setSortBy] = useState('alphabetical'); // 'alphabetical', 'stock-asc', 'stock-desc'
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [selectedItemIds, setSelectedItemIds] = useState(() => {
         const saved = localStorage.getItem('selectedItemIds');
         return saved ? JSON.parse(saved) : [];
@@ -25,6 +28,13 @@ export default function ResidentView({
     const [showItemSelector, setShowItemSelector] = useState(false);
     const [showRestockModal, setShowRestockModal] = useState(false);
     const [selectedRestockItem, setSelectedRestockItem] = useState(null);
+
+    const sortDropdownRef = useRef(null);
+    const { updateItem } = useFirestore();
+
+    const handleHideItem = async (itemId) => {
+        await updateItem(itemId, { hidden: true });
+    };
 
 
     // Persist display mode to localStorage
@@ -43,10 +53,13 @@ export default function ResidentView({
             if (showItemSelector && !e.target.closest(".item-selector-container")) {
                 setShowItemSelector(false);
             }
+            if (showSortDropdown && !e.target.closest(".sort-dropdown-container")) {
+                setShowSortDropdown(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [showItemSelector]);
+    }, [showItemSelector, showSortDropdown]);
 
     // Toggle item selection
     const toggleItemSelection = (itemId) => {
@@ -89,6 +102,21 @@ export default function ResidentView({
 
         return true;
     });
+
+    // Sort items
+    const sortedItems = [...filteredItems].sort((a, b) => {
+        switch (sortBy) {
+            case 'alphabetical':
+                return a.name.localeCompare(b.name);
+            case 'stock-asc':
+                return a.currentStock - b.currentStock;
+            case 'stock-desc':
+                return b.currentStock - a.currentStock;
+            default:
+                return 0;
+        }
+    });
+
 
     if (loading) {
         return (
@@ -182,6 +210,53 @@ export default function ResidentView({
                             </svg>
                         )}
                     </button>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative sort-dropdown-container">
+                        <button
+                            onClick={() => setShowSortDropdown(!showSortDropdown)}
+                            className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                            </svg>
+                            Sort
+                        </button>
+                        {showSortDropdown && (
+                            <div className="absolute z-20 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                                <button
+                                    onClick={() => {
+                                        setSortBy('alphabetical');
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${sortBy === 'alphabetical' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}
+                                >
+                                    <span>Alphabetical</span>
+                                    {sortBy === 'alphabetical' && <span>✓</span>}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setSortBy('stock-asc');
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${sortBy === 'stock-asc' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}
+                                >
+                                    <span>Stock: Low to High</span>
+                                    {sortBy === 'stock-asc' && <span>✓</span>}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setSortBy('stock-desc');
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${sortBy === 'stock-desc' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}
+                                >
+                                    <span>Stock: High to Low</span>
+                                    {sortBy === 'stock-desc' && <span>✓</span>}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Item Selector */}
                     <div className="relative item-selector-container">
@@ -300,14 +375,11 @@ export default function ResidentView({
                     </div>
                 ) : (
                     <ItemGrid
-                        items={filteredItems}
-                        selectedItem={selectedRestockItem}
-                        onSelectItem={(item) => {
-                            setSelectedRestockItem(item);
-                            setShowRestockModal(true);
-                        }}
-                        showStockOnly={true}
+                        items={sortedItems}
                         displayMode={displayMode}
+                        onSelectItem={handleItemClick}
+                        showStockOnly={true}
+                        onHideItem={handleHideItem}
                     />
                 )}
             </div>
