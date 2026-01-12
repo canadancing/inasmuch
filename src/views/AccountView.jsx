@@ -168,9 +168,47 @@ export default function AccountView({ user, onLogin, onLogout }) {
                             </button>
                         </div>
 
-                        <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-6 font-mono">
+                        <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-2 font-mono">
                             {userProfile?.userId || '------'}
                         </div>
+
+                        {/* Unified Inventory Name & Edit/Remark Snippet */}
+                        {currentInventory && (
+                            <div className="mt-6 p-4 bg-white/40 dark:bg-black/20 rounded-2xl border border-white/40 dark:border-primary-800/20 shadow-sm backdrop-blur-md group/inv transition-all hover:bg-white/60 dark:hover:bg-black/30">
+                                <div className="flex items-center justify-between">
+                                    <div className="min-w-0 pr-4">
+                                        <div className="text-[8px] font-black uppercase tracking-[0.2em] text-primary-500/70 dark:text-primary-400/70 mb-1">
+                                            {currentInventory.isOwner ? 'Public Inventory Name' : 'My Private Remark'}
+                                        </div>
+                                        <div className="text-base font-black text-gray-900 dark:text-white truncate">
+                                            {currentInventory.displayName}
+                                        </div>
+                                        {currentInventory.isOwner && currentInventory.nickname && (
+                                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">
+                                                Everyone sees this name
+                                            </div>
+                                        )}
+                                        {!currentInventory.isOwner && (
+                                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">
+                                                Only you see this name
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowNicknameModal(true)}
+                                        className="px-4 py-2 rounded-xl bg-primary-500 text-white text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex-shrink-0 shadow-lg shadow-primary-500/20 active:scale-95 flex items-center gap-2"
+                                    >
+                                        <span>{currentInventory.isOwner ? 'Edit' : 'Remark'}</span>
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+
+
 
                         {/* Integrated Search Bar - Compact Apple Style */}
                         <div className="relative group/search">
@@ -230,31 +268,7 @@ export default function AccountView({ user, onLogin, onLogout }) {
                 </div>
             </div>
 
-            {/* Inventory Nickname Section */}
-            {currentInventory && currentInventory.isOwner && (
-                <div className="card p-6 rounded-[2rem]">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white">Inventory Display Name</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Customize how your inventory appears to collaborators
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setShowNicknameModal(true)}
-                            className="px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-bold hover:bg-primary-600 transition-colors"
-                        >
-                            Edit
-                        </button>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-                        <div className="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Current Display Name</div>
-                        <div className="text-lg font-black text-gray-900 dark:text-white">
-                            {currentInventory.nickname || `${currentInventory.ownerName || 'My'} Inventory`}
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Management & Requests Sections */}
             <NotificationsSection user={user} />
@@ -287,6 +301,16 @@ export default function AccountView({ user, onLogin, onLogout }) {
                 onSuccess={() => {
                     setSearchResult(null);
                     setSearchId('');
+                }}
+            />
+
+            <InventoryNicknameModal
+                isOpen={showNicknameModal}
+                onClose={() => setShowNicknameModal(false)}
+                target={currentInventory}
+                type={currentInventory?.isOwner ? 'public' : 'private'}
+                onSuccess={() => {
+                    // Context update handles the refresh
                 }}
             />
         </div>

@@ -12,10 +12,6 @@ export default function InventorySwitcher() {
         return null;
     }
 
-    const getDisplayName = (inventory) => {
-        return inventory.nickname || inventory.name;
-    };
-
     const getRoleBadge = (inventory) => {
         // Check if user owns this inventory
         if (inventory.isOwner || permissions?.isOwner) {
@@ -35,7 +31,7 @@ export default function InventorySwitcher() {
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {getDisplayName(inventories[0])}
+                        {inventories[0].displayName}
                     </span>
                     <span className={`text-xs ${badge.color}`}>
                         {badge.icon} {badge.label}
@@ -60,7 +56,7 @@ export default function InventorySwitcher() {
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {currentInventory ? getDisplayName(currentInventory) : 'Select Inventory'}
+                        {currentInventory ? currentInventory.displayName : 'Select Inventory'}
                     </span>
                     {currentInventory && (
                         <span className={`text-xs ${getRoleBadge(currentInventory).color}`}>
@@ -76,7 +72,7 @@ export default function InventorySwitcher() {
                 {currentInventory && (
                     <button
                         onClick={() => setRenameInventory(currentInventory)}
-                        className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors shadow-sm"
                         title="Edit inventory name"
                     >
                         <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,10 +85,12 @@ export default function InventorySwitcher() {
                 {dropdownOpen && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                        <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
+                        <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden animate-scale-in">
                             <div className="p-2">
                                 {inventories.map((inventory) => {
                                     const badge = getRoleBadge(inventory);
+                                    const hasCustomName = inventory.privateNickname || inventory.publicNickname;
+
                                     return (
                                         <div
                                             key={inventory.id}
@@ -104,19 +102,19 @@ export default function InventorySwitcher() {
                                                     switchInventory(inventory.id);
                                                     setDropdownOpen(false);
                                                 }}
-                                                className="flex-1 flex items-center justify-between text-left"
+                                                className="flex-1 flex items-center justify-between text-left min-w-0"
                                             >
-                                                <div>
-                                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                        {getDisplayName(inventory)}
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                                        {inventory.displayName}
                                                     </div>
-                                                    {inventory.nickname && (
-                                                        <div className="text-xs text-gray-500">
-                                                            {inventory.name}
+                                                    {hasCustomName && (
+                                                        <div className="text-[10px] text-gray-400 font-medium truncate">
+                                                            Original: {inventory.name}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className={`text-xs ${badge.color} flex items-center gap-1`}>
+                                                <span className={`text-[10px] ${badge.color} flex items-center gap-1 font-black uppercase tracking-widest ml-2 flex-shrink-0`}>
                                                     <span>{badge.icon}</span>
                                                     <span>{badge.label}</span>
                                                 </span>
@@ -126,10 +124,12 @@ export default function InventorySwitcher() {
                                                     e.stopPropagation();
                                                     setRenameInventory(inventory);
                                                 }}
-                                                className="px-2 py-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-400 hover:text-primary-500"
                                                 title="Rename"
                                             >
-                                                <span className="text-sm">✏️</span>
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
                                             </button>
                                         </div>
                                     );
@@ -143,7 +143,8 @@ export default function InventorySwitcher() {
             <InventoryNicknameModal
                 isOpen={!!renameInventory}
                 onClose={() => setRenameInventory(null)}
-                inventory={renameInventory ? { ...renameInventory, userId: user?.uid } : null}
+                target={renameInventory}
+                type={renameInventory?.isOwner ? 'public' : 'private'}
                 onSuccess={() => {
                     // Inventory list will auto-refresh via real-time listener
                 }}

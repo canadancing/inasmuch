@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
@@ -27,22 +27,28 @@ export function InventoryProvider({ children, user }) {
 
         const loadInventories = async () => {
             try {
-                // 1. Get user nicknames
-                const userRef = doc(db, 'users', user.uid);
+                // 1. Get user nicknames (both public and private)
                 const userSnapshot = await getDocs(query(collection(db, 'users'), where('uid', '==', user.uid)));
                 const userData = userSnapshot.empty ? {} : userSnapshot.docs[0].data();
-                const nicknames = userData.inventoryNicknames || {};
+                const inventoryNicknames = userData.inventoryNicknames || {};
+                const collaboratorNicknames = userData.collaboratorNicknames || {};
 
                 // 2. Get owned inventories
                 const ownedRef = collection(db, 'inventories');
                 const ownedQuery = query(ownedRef, where('ownerId', '==', user.uid));
                 const ownedSnapshot = await getDocs(ownedQuery);
-                const ownedInventories = ownedSnapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id,
-                    isOwner: true,
-                    nickname: nicknames[doc.id] || null
-                }));
+                const ownedInventories = ownedSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        ...data,
+                        id: doc.id,
+                        isOwner: true,
+                        publicNickname: data.nickname,
+                        privateNickname: collaboratorNicknames[doc.id],
+                        displayName: collaboratorNicknames[doc.id] || data.nickname || data.name,
+                        nickname: inventoryNicknames[doc.id] || null
+                    };
+                });
 
                 // 3. Get all inventories to find ones where user is a collaborator
                 const allRef = collection(db, 'inventories');
@@ -50,11 +56,21 @@ export function InventoryProvider({ children, user }) {
                 const collaboratedInventories = allSnapshot.docs
                     .map(doc => ({ ...doc.data(), id: doc.id }))
                     .filter(inv => inv.collaborators && inv.collaborators[user.uid])
-                    .map(inv => ({
-                        ...inv,
-                        isOwner: false,
-                        nickname: nicknames[inv.id] || null
-                    }));
+                    .map(inv => {
+                        // Apply private remark to owner name if available
+                        const ownerRemark = collaboratorNicknames[inv.ownerId];
+                        const ownerDisplayName = ownerRemark || inv.ownerName || 'Unknown Owner';
+
+                        return {
+                            ...inv,
+                            isOwner: false,
+                            ownerDisplayName,
+                            publicNickname: inv.nickname,
+                            privateNickname: collaboratorNicknames[inv.id],
+                            displayName: collaboratorNicknames[inv.id] || inv.nickname || inv.name,
+                            nickname: inventoryNicknames[inv.id] || null
+                        };
+                    });
 
                 // Combine both lists
                 const allInventories = [...ownedInventories, ...collaboratedInventories];
@@ -85,7 +101,7 @@ export function InventoryProvider({ children, user }) {
         const qCollaborated = query(inventoriesRef, where('collaboratorUids', 'array-contains', user.uid));
         const unsubCollaborated = onSnapshot(qCollaborated, () => loadInventories());
 
-        // Real-time listener for user profile (to detect nickname changes)
+        // Real-time listener for user profile (to detect nickname/remark changes)
         const qUser = query(collection(db, 'users'), where('uid', '==', user.uid));
         const unsubUser = onSnapshot(qUser, () => loadInventories());
 
@@ -118,7 +134,7 @@ export function InventoryProvider({ children, user }) {
         setCurrentInventoryId(id);
     };
 
-    const updateInventoryNickname = async (inventoryId, nickname) => {
+    const updateInventoryPublicName = async (inventoryId, nickname) => {
         if (!user) return;
 
         try {
@@ -128,11 +144,25 @@ export function InventoryProvider({ children, user }) {
                 updatedAt: serverTimestamp()
             });
         } catch (error) {
-            console.error('Error updating inventory nickname:', error);
+            console.error('Error updating inventory public name:', error);
             throw error;
         }
     };
 
+    const updateCollaboratorPrivateName = async (targetId, nickname) => {
+        if (!user) return;
+
+        try {
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+                [`collaboratorNicknames.${targetId}`]: nickname || null,
+                updatedAt: serverTimestamp()
+            });
+        } catch (error) {
+            console.error('Error updating collaborator private name:', error);
+            throw error;
+        }
+    };
 
     return (
         <InventoryContext.Provider value={{
@@ -141,7 +171,8 @@ export function InventoryProvider({ children, user }) {
             currentInventoryId,
             permissions,
             switchInventory,
-            updateInventoryNickname,
+            updateInventoryPublicName,
+            updateCollaboratorPrivateName,
             loading,
             user
         }}>
