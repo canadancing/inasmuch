@@ -44,6 +44,15 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
         };
     }, [isOpen]);
 
+    // Auto-select items when modal opens
+    useEffect(() => {
+        if (isOpen && items && items.length > 0 && selectedItems.length === 0) {
+            // Pre-select the items passed to the modal
+            const preselected = items.map(item => ({ item, quantity: 1 }));
+            setSelectedItems(preselected);
+        }
+    }, [isOpen, items]);
+
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);
         if (existing) {
