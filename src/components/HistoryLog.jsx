@@ -9,6 +9,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
         date: ''
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+    const [deleteWithRestore, setDeleteWithRestore] = useState(false);
 
     const formatDate = (date) => {
         if (!date) return 'Unknown';
@@ -77,9 +78,10 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
         setEditForm(prev => ({ ...prev, id: null }));
     };
 
-    const handleDelete = async (logId) => {
-        await onDeleteLog(logId);
+    const handleDelete = async (log) => {
+        await onDeleteLog(log.id, deleteWithRestore ? { restore: true, itemId: log.itemId, quantity: log.quantity } : null);
         setShowDeleteConfirm(null);
+        setDeleteWithRestore(false);
     };
 
     if (loading) {
@@ -114,20 +116,34 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                 >
                     {/* Delete Confirmation */}
                     {showDeleteConfirm === log.id ? (
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="space-y-3">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                                 Delete this log entry?
                             </p>
+                            {log.action === 'used' && (
+                                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={deleteWithRestore}
+                                        onChange={(e) => setDeleteWithRestore(e.target.checked)}
+                                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-2 focus:ring-primary-500"
+                                    />
+                                    <span className="font-medium">Restore {log.quantity}× {log.itemName} to stock</span>
+                                </label>
+                            )}
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setShowDeleteConfirm(null)}
-                                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg"
+                                    onClick={() => {
+                                        setShowDeleteConfirm(null);
+                                        setDeleteWithRestore(false);
+                                    }}
+                                    className="flex-1 px-3 py-2 text-sm font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(log.id)}
-                                    className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg"
+                                    onClick={() => handleDelete(log)}
+                                    className="flex-1 px-3 py-2 text-sm font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                                 >
                                     Delete
                                 </button>

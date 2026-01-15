@@ -75,6 +75,7 @@ export default function ItemGrid({ items, selectedItem, onSelectItem, showStockO
                     onSelect={onSelectItem}
                     showStockOnly={showStockOnly}
                     onHideItem={onHideItem}
+                    onConsume={onConsume}
                 />
             ))}
         </div>

@@ -1,4 +1,4 @@
-export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, onHideItem }) {
+export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, onHideItem, onConsume }) {
     const content = (
         <>
             <div className={`text-5xl transition-transform duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>{item.icon}</div>
@@ -23,7 +23,22 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                 className="card-interactive p-6 flex flex-col items-center gap-4 relative group transition-all duration-300 hover:scale-105"
             >
                 {content}
-                {/* Restock Button Indicator */}
+                {/* Consumption (Minus) Button */}
+                {onConsume && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onConsume(item);
+                        }}
+                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-red-600"
+                        title="Log Consumption"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                        </svg>
+                    </button>
+                )}
+                {/* Restock (Plus) Button */}
                 <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -36,7 +51,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                             e.stopPropagation();
                             onHideItem(item.id);
                         }}
-                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-gray-700 dark:hover:bg-gray-600"
+                        className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-gray-700 dark:hover:bg-gray-600"
                         title="Hide Item"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

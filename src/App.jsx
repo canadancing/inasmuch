@@ -12,12 +12,11 @@ import ThemeToggle from './components/ThemeToggle';
 import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
-import LogUsageModal from './components/LogUsageModal';
 import AccessRequestModal from './components/AccessRequestModal';
 import SuperAdminView from './views/SuperAdminView';
 import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
 
-export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme }) {
+export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme, rememberMe, toggleRememberMe }) {
     const [currentView, setCurrentView] = useState('stock');
 
     const {
@@ -76,12 +75,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                     </svg>
                 );
-            case 'log':
-                return (
-                    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                    </svg>
-                );
             case 'admin':
                 return (
                     <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -109,7 +102,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
     // Build nav items - add super admin only for authorized users
     const baseNavItems = [
         { id: 'stock', label: 'STOCK' },
-        { id: 'log', label: 'LOG', isAction: true },
         { id: 'admin', label: 'ADMIN' },
         { id: 'account', label: 'ACCOUNT' },
     ];
@@ -157,6 +149,17 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
                             Track shared house supplies with ease. Sign in to get started.
                         </p>
+                        <label className="flex items-center gap-3 mb-6 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => toggleRememberMe(e.target.checked)}
+                                className="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all cursor-pointer"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                                Stay logged in on this device
+                            </span>
+                        </label>
                         <button
                             onClick={loginWithGoogle}
                             className="btn-primary px-8 py-4 text-lg"
@@ -240,23 +243,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => {
-                                    if (item.isAction) {
-                                        // LOG action
-                                        if (!user) {
-                                            loginWithGoogle();
-                                        } else if (item.id === 'log') {
-                                            if (inventoryPermissions?.canEdit) {
-                                                setShowLogModal(true);
-                                            } else if (inventoryPermissions?.canView) {
-                                                setUpgradeContext({ action: 'LOG' });
-                                                setShowUpgradeModal(true);
-                                            }
-                                        }
-                                    } else {
-                                        setCurrentView(item.id);
-                                    }
-                                }}
+                                onClick={() => setCurrentView(item.id)}
                                 className="flex flex-col items-center justify-center px-4 py-1.5 rounded-full transition-all duration-200 hover:bg-white/20 relative"
                             >
                                 {/* Unified Notification Badge */}
@@ -275,18 +262,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                     })}
                 </div>
             </nav >
-
-            {/* Log Usage Modal */}
-            < LogUsageModal
-                isOpen={showLogModal}
-                onClose={() => setShowLogModal(false)
-                }
-                residents={residents}
-                items={items}
-                onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
-                setCurrentView={setCurrentView}
-                user={user}
-            />
 
             {/* Restock Modal */}
         </div >

@@ -14,7 +14,8 @@ import {
     onAuthStateChanged,
     getRedirectResult,
     setPersistence,
-    browserSessionPersistence
+    browserSessionPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 import { generateUniqueUserId, generateInventoryId } from '../firebase/userIdUtils';
 
@@ -23,6 +24,12 @@ export function useAuth() {
     const [role, setRole] = useState(null); // 'super-admin', 'admin', 'user', or null
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [rememberMe, setRememberMe] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('rememberMe') === 'true';
+        }
+        return false;
+    });
     const [isDark, setIsDark] = useState(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('theme') === 'dark' ||
@@ -78,9 +85,10 @@ export function useAuth() {
                 }
             }
 
-            // Set persistence explicitly to session (per tab)
+            // Set persistence based on rememberMe preference
             try {
-                await setPersistence(auth, browserSessionPersistence);
+                const persistenceMode = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+                await setPersistence(auth, persistenceMode);
             } catch (err) {
                 console.error('Failed to set auth persistence:', err);
             }
@@ -191,6 +199,13 @@ export function useAuth() {
         }
     };
 
+    const toggleRememberMe = (value) => {
+        setRememberMe(value);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('rememberMe', value.toString());
+        }
+    };
+
     return {
         user,
         role,
@@ -201,6 +216,8 @@ export function useAuth() {
         loginWithGoogle,
         logout,
         requestAdminAccess,
+        rememberMe,
+        toggleRememberMe,
         isAdmin: role === 'super-admin' || role === 'admin',
         isSuperAdmin: role === 'super-admin'
     };

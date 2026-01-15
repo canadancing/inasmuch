@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ItemGrid from '../components/ItemGrid';
 import RestockModal from '../components/RestockModal';
+import ConsumptionModal from '../components/ConsumptionModal';
 import { useFirestore } from '../hooks/useFirestore';
 
 export default function ResidentView({
@@ -10,6 +11,7 @@ export default function ResidentView({
     isAdmin,
     residents,
     onRestock,
+    onLog,
     setCurrentView,
     user,
 }) {
@@ -28,6 +30,8 @@ export default function ResidentView({
     const [showItemSelector, setShowItemSelector] = useState(false);
     const [showRestockModal, setShowRestockModal] = useState(false);
     const [selectedRestockItem, setSelectedRestockItem] = useState(null);
+    const [showConsumptionModal, setShowConsumptionModal] = useState(false);
+    const [selectedConsumptionItem, setSelectedConsumptionItem] = useState(null);
 
     const sortDropdownRef = useRef(null);
     const { updateItem } = useFirestore();
@@ -39,6 +43,11 @@ export default function ResidentView({
     const handleItemClick = (item) => {
         setSelectedRestockItem(item);
         setShowRestockModal(true);
+    };
+
+    const handleConsumptionClick = (item) => {
+        setSelectedConsumptionItem(item);
+        setShowConsumptionModal(true);
     };
 
 
@@ -385,6 +394,7 @@ export default function ResidentView({
                         onSelectItem={handleItemClick}
                         showStockOnly={true}
                         onHideItem={handleHideItem}
+                        onConsume={handleConsumptionClick}
                     />
                 )}
             </div>
@@ -400,6 +410,22 @@ export default function ResidentView({
                     items={[selectedRestockItem]}
                     residents={residents}
                     onRestock={onRestock}
+                    setCurrentView={setCurrentView}
+                    user={user}
+                />
+            )}
+
+            {/* Consumption Modal */}
+            {selectedConsumptionItem && (
+                <ConsumptionModal
+                    isOpen={showConsumptionModal}
+                    onClose={() => {
+                        setShowConsumptionModal(false);
+                        setSelectedConsumptionItem(null);
+                    }}
+                    items={[selectedConsumptionItem]}
+                    residents={residents}
+                    onLog={onLog}
                     setCurrentView={setCurrentView}
                     user={user}
                 />
