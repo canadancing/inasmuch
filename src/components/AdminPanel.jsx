@@ -68,6 +68,9 @@ export default function AdminPanel({
     const [newTagColor, setNewTagColor] = useState('blue');
     const [newTagIcon, setNewTagIcon] = useState('🏷️');
     const [editingTag, setEditingTag] = useState(null);
+    const [editTagName, setEditTagName] = useState('');
+    const [editTagColor, setEditTagColor] = useState('blue');
+    const [editTagIcon, setEditTagIcon] = useState('🏷️');
     // Country picker state
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [countrySearch, setCountrySearch] = useState('');
