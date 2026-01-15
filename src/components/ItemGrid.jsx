@@ -1,6 +1,6 @@
 import ItemCard from './ItemCard';
 
-export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem }) {
+export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem, onConsume }) {
     if (items.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
