@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import ResidentSelector from './ResidentSelector';
+import SearchableSection from './SearchableSection';
 
 export default function AdminPanel({
     residents,
