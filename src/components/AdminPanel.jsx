@@ -1285,33 +1285,120 @@ export default function AdminPanel({
                         {tags.map(tag => {
                             const styles = getTagStyles ? getTagStyles(tag.id) : { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-500' };
                             const isDefault = ['resident', 'donor', 'guest', 'staff'].includes(tag.id);
+                            const isEditing = editingTag === tag.id;
 
                             return (
                                 <div key={tag.id} className="card p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">{tag.icon}</span>
-                                            <div>
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm ${styles.bg} ${styles.text}`}>
-                                                    {tag.name}
-                                                </span>
-                                                {isDefault && (
-                                                    <span className="text-xs text-gray-400 ml-2">(default)</span>
+                                    {isEditing ? (
+                                        /* Edit Mode */
+                                        <div className="space-y-3">
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={editTagIcon}
+                                                    onChange={(e) => setEditTagIcon(e.target.value)}
+                                                    className="input w-16 text-2xl text-center"
+                                                    maxLength={4}
+                                                    placeholder="🏷️"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={editTagName}
+                                                    onChange={(e) => setEditTagName(e.target.value)}
+                                                    className="input flex-1"
+                                                    placeholder="Tag name"
+                                                />
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="text-sm text-gray-500 mr-2">Color:</span>
+                                                {tagColors.map(color => (
+                                                    <button
+                                                        key={color.id}
+                                                        type="button"
+                                                        onClick={() => setEditTagColor(color.id)}
+                                                        className={`w-6 h-6 rounded-full ${color.dot} ${editTagColor === color.id ? 'ring-2 ring-offset-2 ring-gray-400' : ''}`}
+                                                        aria-label={color.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingTag(null);
+                                                        setEditTagName('');
+                                                        setEditTagColor('blue');
+                                                        setEditTagIcon('🏷️');
+                                                    }}
+                                                    className="btn btn-secondary flex-1"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (editTagName.trim()) {
+                                                            onUpdateTag(tag.id, {
+                                                                name: editTagName.trim(),
+                                                                color: editTagColor,
+                                                                icon: editTagIcon
+                                                            });
+                                                            setEditingTag(null);
+                                                            setEditTagName('');
+                                                            setEditTagColor('blue');
+                                                            setEditTagIcon('🏷️');
+                                                        }
+                                                    }}
+                                                    className="btn btn-primary flex-1"
+                                                    disabled={!editTagName.trim()}
+                                                >
+                                                    Save
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Normal View */
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{tag.icon}</span>
+                                                <div>
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm ${styles.bg} ${styles.text}`}>
+                                                        {tag.name}
+                                                    </span>
+                                                    {isDefault && (
+                                                        <span className="text-xs text-gray-400 ml-2">(default)</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingTag(tag.id);
+                                                        setEditTagName(tag.name);
+                                                        setEditTagColor(tag.color);
+                                                        setEditTagIcon(tag.icon);
+                                                    }}
+                                                    className="p-2 text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                                    aria-label="Edit"
+                                                    title="Edit tag"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                                {!isDefault && (
+                                                    <button
+                                                        onClick={() => onRemoveTag(tag.id)}
+                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                                                        aria-label="Delete"
+                                                        title="Delete tag"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
-                                        {!isDefault && (
-                                            <button
-                                                onClick={() => onRemoveTag(tag.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                                aria-label="Delete"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })}
