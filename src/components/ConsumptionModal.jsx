@@ -1,7 +1,7 @@
 // Modal for logging consumption/usage quickly
 import { useState, useEffect, useRef } from 'react';
 
-export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, setCurrentView, residents }) {
+export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, setCurrentView, residents, onAddResident }) {
     const [selectedPerson, setSelectedPerson] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
@@ -10,6 +10,13 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
     const [consumptionDate, setConsumptionDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Inline person creation states
+    const [showAddPersonForm, setShowAddPersonForm] = useState(false);
+    const [newPersonFirstName, setNewPersonFirstName] = useState('');
+    const [newPersonLastName, setNewPersonLastName] = useState('');
+    const [newPersonRoom, setNewPersonRoom] = useState('');
+    const [isCreatingPerson, setIsCreatingPerson] = useState(false);
 
     // Refs for click-outside detection
     const itemDropdownRef = useRef(null);
@@ -79,6 +86,82 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
         setSelectedItems(selectedItems.map(si =>
             si.item.id === itemId ? { ...si, quantity: newQuantity } : si
         ));
+    };
+
+    // Parse search query into first/last name
+    const parseNameFromSearch = (searchText) => {
+        const trimmed = searchText.trim();
+        if (!trimmed) return { firstName: '', lastName: '' };
+
+        const parts = trimmed.split(/\s+/);
+        if (parts.length === 1) {
+            return { firstName: parts[0], lastName: '' };
+        }
+        // First word = firstName, rest = lastName
+        return {
+            firstName: parts[0],
+            lastName: parts.slice(1).join(' ')
+        };
+    };
+
+    const handleShowAddPersonForm = () => {
+        const { firstName, lastName } = parseNameFromSearch(personSearch);
+        setNewPersonFirstName(firstName);
+        setNewPersonLastName(lastName);
+        setNewPersonRoom('');
+        setShowAddPersonForm(true);
+        setShowPersonDropdown(false);
+    };
+
+    const handleCreatePerson = async () => {
+        if (!newPersonFirstName.trim() || !newPersonRoom.trim()) {
+            alert('Please enter at least a first name and room number');
+            return;
+        }
+
+        setIsCreatingPerson(true);
+        try {
+            const personData = {
+                firstName: newPersonFirstName.trim(),
+                lastName: newPersonLastName.trim(),
+                room: newPersonRoom.trim()
+            };
+
+            await onAddResident(personData);
+
+            // Wait a moment for Firestore to sync
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Find the newly created person (most recent with matching name)
+            const newPerson = residents.find(r =>
+                r.firstName === personData.firstName &&
+                r.lastName === personData.lastName &&
+                r.room === personData.room
+            );
+
+            if (newPerson) {
+                setSelectedPerson(newPerson);
+            }
+
+            // Reset form
+            setShowAddPersonForm(false);
+            setNewPersonFirstName('');
+            setNewPersonLastName('');
+            setNewPersonRoom('');
+            setPersonSearch('');
+        } catch (error) {
+            console.error('Error creating person:', error);
+            alert('Failed to create person. Please try again.');
+        } finally {
+            setIsCreatingPerson(false);
+        }
+    };
+
+    const handleCancelAddPerson = () => {
+        setShowAddPersonForm(false);
+        setNewPersonFirstName('');
+        setNewPersonLastName('');
+        setNewPersonRoom('');
     };
 
     const handleSubmit = async () => {
@@ -167,6 +250,27 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                             />
                             {showPersonDropdown && (
                                 <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                    {/* Add Person Option - Show at top when searching */}
+                                    {personSearch.trim() && onAddResident && (
+                                        <button
+                                            onClick={handleShowAddPersonForm}
+                                            className="w-full px-4 py-3 text-left hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-green-50/50 dark:bg-green-900/10"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">
+                                                +
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-green-700 dark:text-green-400">
+                                                    Add '{personSearch}'
+                                                </div>
+                                                <div className="text-xs text-green-600 dark:text-green-500">
+                                                    Create new person
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
+
+                                    {/* Existing People */}
                                     {filteredPersons.length > 0 ? filteredPersons.map((person) => (
                                         <button
                                             key={person.id}
@@ -186,7 +290,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                                                 </div>
                                             </div>
                                         </button>
-                                    )) : (
+                                    )) : !personSearch.trim() ? (
                                         <div className="p-6 text-center">
                                             <div className="text-3xl mb-2">👤</div>
                                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -202,10 +306,12 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                                                 ➕ Add People
                                             </button>
                                         </div>
-                                    )}
+                                    ) : null}
                                 </div>
                             )}
                         </div>
+
+                        {/* Selected Person Display */}
                         {selectedPerson && (
                             <div className="mt-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center justify-between">
                                 <div>
@@ -222,6 +328,82 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                                 >
                                     ✕
                                 </button>
+                            </div>
+                        )}
+
+                        {/* Inline Add Person Form */}
+                        {showAddPersonForm && (
+                            <div className="mt-2 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 space-y-3">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">
+                                        +
+                                    </div>
+                                    <h3 className="font-bold text-green-900 dark:text-green-100">Add New Person</h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">
+                                            First Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newPersonFirstName}
+                                            onChange={(e) => setNewPersonFirstName(e.target.value)}
+                                            placeholder="John"
+                                            className="w-full px-3 py-2 rounded-lg border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:ring-0"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">
+                                            Last Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newPersonLastName}
+                                            onChange={(e) => setNewPersonLastName(e.target.value)}
+                                            placeholder="Doe"
+                                            className="w-full px-3 py-2 rounded-lg border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:ring-0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">
+                                        Room *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={newPersonRoom}
+                                        onChange={(e) => setNewPersonRoom(e.target.value)}
+                                        placeholder="101"
+                                        className="w-full px-3 py-2 rounded-lg border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:border-green-500 focus:ring-0"
+                                    />
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        onClick={handleCancelAddPerson}
+                                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        disabled={isCreatingPerson}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreatePerson}
+                                        disabled={isCreatingPerson || !newPersonFirstName.trim() || !newPersonRoom.trim()}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isCreatingPerson || !newPersonFirstName.trim() || !newPersonRoom.trim()
+                                                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                : 'bg-green-500 text-white hover:bg-green-600'
+                                            }`}
+                                    >
+                                        {isCreatingPerson ? (
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                                        ) : (
+                                            'Create & Select'
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

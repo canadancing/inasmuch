@@ -14,6 +14,7 @@ export default function ResidentView({
     onLog,
     setCurrentView,
     user,
+    onAddResident,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [displayMode, setDisplayMode] = useState(() => {
@@ -426,6 +427,7 @@ export default function ResidentView({
                     items={[selectedConsumptionItem]}
                     residents={residents}
                     onLog={onLog}
+                    onAddResident={onAddResident}
                     setCurrentView={setCurrentView}
                     user={user}
                 />

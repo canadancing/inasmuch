@@ -176,6 +176,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         isAdmin={isAdmin}
                         onRestock={restockItem}
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
+                        onAddResident={addResident}
                         setCurrentView={setCurrentView}
                         customIcons={customIcons}
                         tags={tags}
