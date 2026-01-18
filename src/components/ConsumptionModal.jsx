@@ -250,8 +250,8 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                             />
                             {showPersonDropdown && (
                                 <div className="absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                                    {/* Add Person Option - Show at top when searching */}
-                                    {personSearch.trim() && onAddResident && (
+                                    {/* Add Person Option - Show at top when searching and function is available */}
+                                    {personSearch.trim() && onAddResident && !selectedPerson && (
                                         <button
                                             onClick={handleShowAddPersonForm}
                                             className="w-full px-4 py-3 text-left hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-green-50/50 dark:bg-green-900/10"
@@ -393,8 +393,8 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
                                         onClick={handleCreatePerson}
                                         disabled={isCreatingPerson || !newPersonFirstName.trim() || !newPersonRoom.trim()}
                                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isCreatingPerson || !newPersonFirstName.trim() || !newPersonRoom.trim()
-                                                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                                                : 'bg-green-500 text-white hover:bg-green-600'
+                                            ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                                            : 'bg-green-500 text-white hover:bg-green-600'
                                             }`}
                                     >
                                         {isCreatingPerson ? (
