@@ -1,6 +1,8 @@
 # Inasmuch - Shared House Supply Tracker
 
 A mobile-first web app for tracking household supply usage across residents. Built with React, Vite, Tailwind CSS, and Firebase.
+<img width="1184" height="1814" alt="image" src="https://github.com/user-attachments/assets/f3990700-7cac-4831-afe6-29923a3bce22" />
+
 
 ![Inasmuch](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
