@@ -40,3 +40,8 @@ obj/
 Thumbs.db
 Desktop.ini
 .vercel
+
+# Temporary files (instruction.md guideline)
+.tmp/
+*.bak
+*.tmp

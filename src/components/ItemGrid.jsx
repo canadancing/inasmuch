@@ -1,6 +1,7 @@
 import ItemCard from './ItemCard';
+import AddItemCard from './AddItemCard';
 
-export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem, onConsume }) {
+export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem, onConsume, onShowRecords, onAddItem }) {
     if (items.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -91,8 +92,12 @@ export default function ItemGrid({ items, selectedItem, onSelectItem, showStockO
                     showStockOnly={showStockOnly}
                     onHideItem={onHideItem}
                     onConsume={onConsume}
+                    onShowRecords={onShowRecords}
                 />
             ))}
+            {onAddItem && (
+                <AddItemCard onClick={onAddItem} />
+            )}
         </div>
     );
 }

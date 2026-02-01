@@ -16,7 +16,7 @@ import AccessRequestModal from './components/AccessRequestModal';
 import SuperAdminView from './views/SuperAdminView';
 import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
 
-export default function App({ user, loading, loginWithGoogle, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme, rememberMe, toggleRememberMe }) {
+export default function App({ user, loading, loginWithGoogle, loginWithEmail, registerWithEmail, linkGoogleAccount, linkEmailAccount, unlinkGoogleAccount, unlinkEmailAccount, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme, rememberMe, toggleRememberMe, error }) {
     const [currentView, setCurrentView] = useState('stock');
 
     const {
@@ -138,7 +138,20 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
 
             {/* Main Content */}
             <main className="flex-1 pt-24 pb-32 px-6 max-w-5xl mx-auto w-full overflow-y-auto">
-                {!user ? (
+                {currentView === 'account' ? (
+                    <AccountView
+                        user={user}
+                        onLogin={loginWithGoogle}
+                        onLoginWithEmail={loginWithEmail}
+                        onRegister={registerWithEmail}
+                        onLinkGoogle={linkGoogleAccount}
+                        onLinkEmail={linkEmailAccount}
+                        onUnlinkGoogle={unlinkGoogleAccount}
+                        onUnlinkEmail={unlinkEmailAccount}
+                        onLogout={logout}
+                        error={error}
+                    />
+                ) : !user ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                         <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-4xl shadow-2xl mb-6">
                             I
@@ -149,23 +162,26 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
                             Track shared house supplies with ease. Sign in to get started.
                         </p>
-                        <label className="flex items-center gap-3 mb-6 cursor-pointer group">
-                            <input
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={(e) => toggleRememberMe(e.target.checked)}
-                                className="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all cursor-pointer"
-                            />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                                Stay logged in on this device
-                            </span>
-                        </label>
-                        <button
-                            onClick={loginWithGoogle}
-                            className="btn-primary px-8 py-4 text-lg"
-                        >
-                            Sign in with Google
-                        </button>
+                        <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+                            <button
+                                onClick={() => setCurrentView('account')}
+                                className="btn-primary px-8 py-4 text-lg"
+                            >
+                                Get Started
+                            </button>
+                            <button
+                                onClick={loginWithGoogle}
+                                className="px-8 py-3 rounded-2xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center gap-3 text-gray-900 dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all"
+                            >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                </svg>
+                                Google Login
+                            </button>
+                        </div>
                     </div>
                 ) : currentView === 'stock' ? (
                     <ResidentView
@@ -177,6 +193,7 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         onRestock={restockItem}
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
                         onAddResident={addResident}
+                        onAddItem={addItem}
                         setCurrentView={setCurrentView}
                         customIcons={customIcons}
                         tags={tags}
@@ -224,12 +241,6 @@ export default function App({ user, loading, loginWithGoogle, logout, isAdmin, i
                         isSuperAdmin={isSuperAdmin}
                         role={role}
                         permissions={inventoryPermissions}
-                    />
-                ) : currentView === 'account' ? (
-                    <AccountView
-                        user={user}
-                        onLogin={loginWithGoogle}
-                        onLogout={logout}
                     />
                 ) : currentView === 'superadmin' ? (
                     <SuperAdminView user={user} />

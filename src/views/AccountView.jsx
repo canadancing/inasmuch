@@ -9,8 +9,9 @@ import NotificationsSection from '../components/NotificationsSection';
 import CollaboratorList from '../components/CollaboratorList';
 import DataManagement from '../components/DataManagement';
 import InventoryNicknameModal from '../components/InventoryNicknameModal';
+import AuthForm from '../components/AuthForm';
 
-export default function AccountView({ user, onLogin, onLogout }) {
+export default function AccountView({ user, onLogin, onLoginWithEmail, onRegister, onLinkGoogle, onLinkEmail, onUnlinkGoogle, onUnlinkEmail, onLogout, error }) {
     const { currentInventory } = useInventory();
     const [userProfile, setUserProfile] = useState(null);
     const [searchId, setSearchId] = useState('');
@@ -19,6 +20,9 @@ export default function AccountView({ user, onLogin, onLogout }) {
     const [copied, setCopied] = useState(false);
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [showNicknameModal, setShowNicknameModal] = useState(false);
+    const [isLinking, setIsLinking] = useState(false);
+    const [authLoading, setAuthLoading] = useState(false);
+    const [localError, setLocalError] = useState(null);
 
     // Fetch user profile with userId AND ensure inventory exists
     useEffect(() => {
@@ -75,6 +79,99 @@ export default function AccountView({ user, onLogin, onLogout }) {
         }
     };
 
+    const handleAuthSubmit = async ({ email, password, displayName, mode }) => {
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            if (mode === 'register') {
+                await onRegister(email, password, displayName);
+            } else {
+                await onLoginWithEmail(email, password);
+            }
+        } catch (err) {
+            setLocalError(err.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            await onLogin();
+        } catch (err) {
+            setLocalError(err.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleLinkEmail = async ({ email, password }) => {
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            await onLinkEmail(email, password);
+            setIsLinking(false);
+        } catch (err) {
+            if (err.code === 'auth/credential-already-in-use') {
+                setLocalError('This Google account is already linked to another account. Please sign out and sign in with Google instead.');
+            } else if (err.code === 'auth/email-already-in-use') {
+                setLocalError('This email is already in use by another account.');
+            } else {
+                setLocalError(err.message);
+            }
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleLinkGoogle = async () => {
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            await onLinkGoogle();
+        } catch (err) {
+            console.error('Linking error (Google):', err);
+            // Handle the specific case where Google account is already linked to another account
+            if (err.code === 'auth/credential-already-in-use') {
+                setLocalError('This Google account is already linked to another account. Please sign out and sign in with Google instead.');
+            } else if (err.code === 'auth/provider-already-linked') {
+                setLocalError('A Google account is already linked to this account.');
+            } else {
+                setLocalError(err.message);
+            }
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleUnlinkGoogle = async () => {
+        if (!confirm('Are you sure you want to unlink your Google account? You will need another sign-in method to access your account.')) return;
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            await onUnlinkGoogle();
+        } catch (err) {
+            setLocalError(err.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleUnlinkEmail = async () => {
+        if (!confirm('Are you sure you want to unlink your password? You will need another sign-in method to access your account.')) return;
+        setAuthLoading(true);
+        setLocalError(null);
+        try {
+            await onUnlinkEmail();
+        } catch (err) {
+            setLocalError(err.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
     const handleSearch = async () => {
         if (!searchId || searchId.length !== 6) return;
 
@@ -102,30 +199,24 @@ export default function AccountView({ user, onLogin, onLogout }) {
         }
     };
 
+    const isGoogleLinked = user?.providerData?.some(p => p.providerId === 'google.com');
+    const isEmailLinked = user?.providerData?.some(p => p.providerId === 'password');
+
     if (!user) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-                <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-5xl shadow-2xl mb-8 animate-float">
-                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] py-12 animate-fade-in">
+                <div className="w-20 h-20 rounded-[1.75rem] bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-4xl shadow-2xl mb-8 animate-float">
+                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 21a10.003 10.003 0 008.384-4.51m-2.408-4.46A3 3 0 0120 9a3 3 0 10-5.997-.188m-5.012 0a3 3 0 10-5.998.188A3 3 0 0110 9c0 1.657-1.343 3-3 3s-3-1.343-3-3a3 3 0 013-3 3 3 0 013 3z" />
                     </svg>
                 </div>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Welcome to Inasmuch</h2>
-                <p className="text-gray-500 dark:text-gray-400 mb-10 max-w-xs mx-auto">
-                    Sign in to manage your inventory and collaborate with others.
-                </p>
-                <button
-                    onClick={onLogin}
-                    className="btn btn-primary px-10 py-4 text-lg flex items-center gap-3 shadow-xl shadow-primary-500/20 active:scale-95 transition-all"
-                >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                    Sign in with Google
-                </button>
+
+                <AuthForm
+                    onSubmit={handleAuthSubmit}
+                    onGoogleLogin={handleGoogleLogin}
+                    loading={authLoading}
+                    error={localError || error}
+                />
             </div>
         );
     }
@@ -136,17 +227,25 @@ export default function AccountView({ user, onLogin, onLogout }) {
             <div className="card overflow-hidden !rounded-[2rem]">
                 <div className="p-6">
                     <div className="flex items-center gap-3 mb-6">
-                        <img
-                            src={user.photoURL}
-                            alt={user.displayName}
-                            className="w-14 h-14 rounded-xl shadow-md"
-                        />
+                        {user.photoURL ? (
+                            <img
+                                src={user.photoURL}
+                                alt={user.displayName}
+                                className="w-14 h-14 rounded-xl shadow-md"
+                            />
+                        ) : (
+                            <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-500 font-black text-xl">
+                                {user.displayName?.charAt(0) || user.email?.charAt(0) || '?'}
+                            </div>
+                        )}
                         <div className="flex-1">
                             <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">
-                                {user.displayName}
+                                {user.displayName || 'Unnamed User'}
                             </h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {user.email}
+                                {user.email?.endsWith('@inasmuch.local')
+                                    ? user.email.split('@')[0]
+                                    : user.email}
                             </p>
                         </div>
                     </div>
@@ -268,6 +367,145 @@ export default function AccountView({ user, onLogin, onLogout }) {
                 </div>
             </div>
 
+            {/* Security & Integrations */}
+            <div className="card !rounded-[2rem] overflow-hidden">
+                <div className="p-6">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 1.56.322 3.044.908 4.391a11.969 11.969 0 005.657 5.76c.612.29 1.257.514 1.935.666a1.191 1.191 0 00.414 0c.678-.152 1.323-.376 1.935-.666a11.969 11.969 0 005.657-5.76c.586-1.347.908-2.831.908-4.391 0-1.246-.19-2.447-.542-3.58A11.959 11.959 0 0112 2.714z" />
+                        </svg>
+                        Security & Integrations
+                    </h3>
+
+                    {/* Error Display */}
+                    {localError && (
+                        <div className="mb-4 p-4 rounded-2xl bg-red-50/80 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 animate-slide-down">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                                <div className="flex-1">
+                                    <p className="text-xs font-bold text-red-700 dark:text-red-400">{localError}</p>
+                                </div>
+                                <button
+                                    onClick={() => setLocalError(null)}
+                                    className="text-red-400 hover:text-red-600 transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                        {/* Google Integration */}
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-transparent hover:border-primary-500/10 transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-gray-900 dark:text-white">Google Account</p>
+                                    {isGoogleLinked && user?.email ? (
+                                        <>
+                                            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Connected</p>
+                                            <p className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">{user.email}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Not Linked</p>
+                                    )}
+                                </div>
+                            </div>
+                            {isGoogleLinked ? (
+                                <button
+                                    onClick={handleUnlinkGoogle}
+                                    disabled={authLoading || !isEmailLinked}
+                                    className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-red-100 dark:border-red-900/30 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title={!isEmailLinked ? 'Cannot unlink - you must have at least one sign-in method' : ''}
+                                >
+                                    {authLoading ? 'Processing...' : 'Unlink'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleLinkGoogle}
+                                    className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all"
+                                >
+                                    Link
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Password Integration */}
+                        <div className="flex flex-col gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-transparent hover:border-primary-500/10 transition-all">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+                                        <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black text-gray-900 dark:text-white">Email & Password</p>
+                                        {isEmailLinked && user?.email ? (
+                                            <>
+                                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Configured</p>
+                                                <p className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">{user.email}</p>
+                                            </>
+                                        ) : (
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">No Password Set</p>
+                                        )}
+                                    </div>
+                                </div>
+                                {isEmailLinked ? (
+                                    <button
+                                        onClick={handleUnlinkEmail}
+                                        disabled={authLoading || !isGoogleLinked}
+                                        className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-red-100 dark:border-red-900/30 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title={!isGoogleLinked ? 'Cannot unlink - you must have at least one sign-in method' : ''}
+                                    >
+                                        {authLoading ? 'Processing...' : 'Unlink'}
+                                    </button>
+                                ) : (
+                                    !isLinking && (
+                                        <button
+                                            onClick={() => setIsLinking(true)}
+                                            className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all"
+                                        >
+                                            Setup
+                                        </button>
+                                    )
+                                )}    </div>
+
+                            {isLinking && (
+                                <div className="pt-2 border-t border-gray-100 dark:border-gray-700 animate-slide-down">
+                                    <p className="text-[10px] font-bold text-gray-500 mb-4 px-1">
+                                        Enter credentials to link a password to your account.
+                                    </p>
+                                    <AuthForm
+                                        mode="link"
+                                        onSubmit={handleLinkEmail}
+                                        loading={authLoading}
+                                        error={localError}
+                                    />
+                                    <button
+                                        onClick={() => setIsLinking(false)}
+                                        className="w-full mt-2 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-500"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 
             {/* Management & Requests Sections */}

@@ -6,7 +6,8 @@ import {
     doc,
     getDoc,
     setDoc,
-    serverTimestamp
+    serverTimestamp,
+    EmailAuthProvider
 } from '../firebase/config';
 import {
     signInWithPopup,
@@ -15,7 +16,13 @@ import {
     getRedirectResult,
     setPersistence,
     browserSessionPersistence,
-    browserLocalPersistence
+    browserLocalPersistence,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
+    linkWithPopup,
+    linkWithCredential,
+    unlink
 } from 'firebase/auth';
 import { generateUniqueUserId, generateInventoryId } from '../firebase/userIdUtils';
 
@@ -171,10 +178,87 @@ export function useAuth() {
     const loginWithGoogle = async () => {
         setError(null);
         try {
-            const result = await signInWithPopup(auth, googleProvider);
+            await signInWithPopup(auth, googleProvider);
         } catch (err) {
             console.error('Login error:', err);
             setError(err.message);
+            throw err;
+        }
+    };
+
+    const loginWithEmail = async (email, password) => {
+        setError(null);
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+            console.error('Email login error:', err);
+            setError(err.message);
+            throw err;
+        }
+    };
+
+    const registerWithEmail = async (email, password, displayName) => {
+        setError(null);
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(userCredential.user, { displayName });
+            return userCredential.user;
+        } catch (err) {
+            console.error('Registration error:', err);
+            setError(err.message);
+            throw err;
+        }
+    };
+
+    const linkGoogleAccount = async () => {
+        if (!user) return;
+        setError(null);
+        try {
+            await linkWithPopup(user, googleProvider);
+            // After linking, the user object onAuthStateChanged will trigger and update Firestore
+        } catch (err) {
+            console.error('Linking error (Google):', err);
+            setError(err.message);
+            throw err;
+        }
+    };
+
+    const linkEmailAccount = async (email, password) => {
+        if (!user) return;
+        setError(null);
+        try {
+            const credential = EmailAuthProvider.credential(email, password);
+            await linkWithCredential(user, credential);
+        } catch (err) {
+            console.error('Linking error (Email):', err);
+            setError(err.message);
+            throw err;
+        }
+    };
+
+    const unlinkGoogleAccount = async () => {
+        if (!user) return;
+        setError(null);
+        try {
+            await unlink(user, 'google.com');
+            // After unlinking, the user object will be refreshed via onAuthStateChanged
+        } catch (err) {
+            console.error('Unlinking error (Google):', err);
+            setError(err.message);
+            throw err;
+        }
+    };
+
+    const unlinkEmailAccount = async () => {
+        if (!user) return;
+        setError(null);
+        try {
+            await unlink(user, 'password');
+            // After unlinking, the user object will be refreshed via onAuthStateChanged
+        } catch (err) {
+            console.error('Unlinking error (Email):', err);
+            setError(err.message);
+            throw err;
         }
     };
 
@@ -214,6 +298,12 @@ export function useAuth() {
         isDark,
         toggleTheme,
         loginWithGoogle,
+        loginWithEmail,
+        registerWithEmail,
+        linkGoogleAccount,
+        linkEmailAccount,
+        unlinkGoogleAccount,
+        unlinkEmailAccount,
         logout,
         requestAdminAccess,
         rememberMe,

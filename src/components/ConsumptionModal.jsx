@@ -1,7 +1,7 @@
 // Modal for logging consumption/usage quickly
 import { useState, useEffect, useRef } from 'react';
 
-export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, setCurrentView, residents, onAddResident }) {
+export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident }) {
     const [selectedPerson, setSelectedPerson] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
@@ -52,12 +52,15 @@ export default function ConsumptionModal({ isOpen, onClose, items, onLog, user, 
 
     // Auto-select items when modal opens
     useEffect(() => {
-        if (isOpen && items && items.length > 0 && selectedItems.length === 0) {
-            // Pre-select the items passed to the modal
-            const preselected = items.map(item => ({ item, quantity: 1 }));
-            setSelectedItems(preselected);
+        if (isOpen && selectedItems.length === 0) {
+            // Pre-select the initialItems passed to the modal (if provided), otherwise items
+            const itemsToPreselect = initialItems && initialItems.length > 0 ? initialItems : items;
+            if (itemsToPreselect && itemsToPreselect.length > 0) {
+                const preselected = itemsToPreselect.map(item => ({ item, quantity: 1 }));
+                setSelectedItems(preselected);
+            }
         }
-    }, [isOpen, items]);
+    }, [isOpen, initialItems]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);

@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import ItemGrid from '../components/ItemGrid';
 import RestockModal from '../components/RestockModal';
 import ConsumptionModal from '../components/ConsumptionModal';
+import ItemRecordsModal from '../components/ItemRecordsModal';
+import AddItemModal from '../components/AddItemModal';
 import { useFirestore } from '../hooks/useFirestore';
+import { useInventory } from '../context/InventoryContext';
 
 export default function ResidentView({
     items,
@@ -15,6 +18,7 @@ export default function ResidentView({
     setCurrentView,
     user,
     onAddResident,
+    onAddItem,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [displayMode, setDisplayMode] = useState(() => {
@@ -33,9 +37,13 @@ export default function ResidentView({
     const [selectedRestockItem, setSelectedRestockItem] = useState(null);
     const [showConsumptionModal, setShowConsumptionModal] = useState(false);
     const [selectedConsumptionItem, setSelectedConsumptionItem] = useState(null);
+    const [showRecordsModal, setShowRecordsModal] = useState(false);
+    const [selectedRecordsItem, setSelectedRecordsItem] = useState(null);
+    const [showAddItemModal, setShowAddItemModal] = useState(false);
 
     const sortDropdownRef = useRef(null);
     const { updateItem } = useFirestore();
+    const { currentInventoryId } = useInventory();
 
     const handleHideItem = async (itemId) => {
         await updateItem(itemId, { hidden: true });
@@ -49,6 +57,11 @@ export default function ResidentView({
     const handleConsumptionClick = (item) => {
         setSelectedConsumptionItem(item);
         setShowConsumptionModal(true);
+    };
+
+    const handleShowRecords = (item) => {
+        setSelectedRecordsItem(item);
+        setShowRecordsModal(true);
     };
 
 
@@ -396,6 +409,8 @@ export default function ResidentView({
                         showStockOnly={true}
                         onHideItem={handleHideItem}
                         onConsume={handleConsumptionClick}
+                        onShowRecords={handleShowRecords}
+                        onAddItem={onAddItem ? () => setShowAddItemModal(true) : null}
                     />
                 )}
             </div>
@@ -424,12 +439,33 @@ export default function ResidentView({
                         setShowConsumptionModal(false);
                         setSelectedConsumptionItem(null);
                     }}
-                    items={[selectedConsumptionItem]}
+                    items={items}
+                    initialItems={[selectedConsumptionItem]}
                     residents={residents}
                     onLog={onLog}
                     onAddResident={onAddResident}
                     setCurrentView={setCurrentView}
                     user={user}
+                />
+            )}
+
+            {/* Item Records Modal */}
+            <ItemRecordsModal
+                isOpen={showRecordsModal}
+                onClose={() => {
+                    setShowRecordsModal(false);
+                    setSelectedRecordsItem(null);
+                }}
+                item={selectedRecordsItem}
+                currentInventoryId={currentInventoryId}
+            />
+
+            {/* Add Item Modal */}
+            {onAddItem && (
+                <AddItemModal
+                    isOpen={showAddItemModal}
+                    onClose={() => setShowAddItemModal(false)}
+                    onAddItem={onAddItem}
                 />
             )}
         </div>

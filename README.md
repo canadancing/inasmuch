@@ -46,6 +46,10 @@ src/
 ├── App.jsx           # Main app component
 ├── main.jsx          # Entry point
 └── index.css         # Global styles
+
+directives/           # Markdown instructions and SOPs
+execution/            # Deterministic scripts and actions
+.tmp/                 # Temporary processing files (gitignored)
 ```
 
 ## Default Admin PIN

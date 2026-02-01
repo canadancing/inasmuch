@@ -29,6 +29,8 @@ export const usersRef = collection(db, 'users');
 // Auth
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+import { EmailAuthProvider } from 'firebase/auth';
+export { EmailAuthProvider };
 
 // Helper functions
 export {
