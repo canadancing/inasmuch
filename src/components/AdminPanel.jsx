@@ -432,6 +432,8 @@ export default function AdminPanel({
     // Reset resident form (Force Close)
     const resetResidentForm = () => {
         setResidentForm({
+            entityType: 'person',
+            displayName: '',
             firstName: '',
             lastName: '',
             phone: '',
@@ -439,6 +441,7 @@ export default function AdminPanel({
             country: '',
             moveInDate: '',
             moveOutDate: '',
+            status: 'active',
             notes: '',
             tags: ['resident']
         });
@@ -466,6 +469,8 @@ export default function AdminPanel({
     // Handle opening add modal
     const openAddResidentModal = () => {
         const emptyForm = {
+            entityType: 'person',
+            displayName: '',
             firstName: '',
             lastName: '',
             phone: '',
@@ -473,6 +478,7 @@ export default function AdminPanel({
             country: '',
             moveInDate: '',
             moveOutDate: '',
+            status: 'active',
             notes: '',
             tags: ['resident']
         };
@@ -484,17 +490,34 @@ export default function AdminPanel({
 
     // Handle opening edit modal
     const openEditResidentModal = (resident) => {
-        // Handle legacy data where name might be combined in 'name' field
-        let fName = resident.firstName || '';
-        let lName = resident.lastName || '';
+        // Detect entity type
+        const isLocation = resident.entityType === 'location' ||
+            (resident.tags && resident.tags.includes('common')) ||
+            (resident.displayName && !resident.firstName);
 
-        if (!fName && !lName && resident.name) {
-            const parts = resident.name.trim().split(' ');
-            fName = parts[0] || '';
-            lName = parts.slice(1).join(' ') || '';
+        let fName = '';
+        let lName = '';
+        let displayName = '';
+
+        if (isLocation) {
+            // For locations, use displayName
+            displayName = resident.displayName || resident.name || '';
+        } else {
+            // For people, use firstName/lastName
+            fName = resident.firstName || '';
+            lName = resident.lastName || '';
+
+            // Handle legacy data where name might be combined in 'name' field
+            if (!fName && !lName && resident.name) {
+                const parts = resident.name.trim().split(' ');
+                fName = parts[0] || '';
+                lName = parts.slice(1).join(' ') || '';
+            }
         }
 
         const formData = {
+            entityType: resident.entityType || (isLocation ? 'location' : 'person'),
+            displayName,
             firstName: fName,
             lastName: lName,
             phone: resident.phone || '',
@@ -502,6 +525,7 @@ export default function AdminPanel({
             country: resident.country || '',
             moveInDate: resident.moveInDate || '',
             moveOutDate: resident.moveOutDate || '',
+            status: resident.status || 'active',
             notes: resident.notes || '',
             tags: resident.tags || ['resident']
         };
@@ -519,7 +543,14 @@ export default function AdminPanel({
 
     // Handle form submission (add or update)
     const handleSaveResident = () => {
-        if (!residentForm.firstName.trim()) return;
+        const isLocation = residentForm.entityType === 'location';
+
+        // Validate based on entity type
+        if (isLocation) {
+            if (!residentForm.displayName.trim()) return;
+        } else {
+            if (!residentForm.firstName.trim()) return;
+        }
 
         if (editingResident) {
             onUpdateResident(editingResident.id, residentForm);
@@ -734,104 +765,152 @@ export default function AdminPanel({
                                 {/* Scrollable Body */}
                                 <div className="flex-1 overflow-y-auto p-6">
                                     <div className="space-y-4">
-                                        {/* Name Row */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    First Name *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={residentForm.firstName}
-                                                    onChange={(e) => updateResidentField('firstName', e.target.value)}
-                                                    className="input w-full"
-                                                    placeholder="John"
-                                                />
+                                        {/* Status Badge (if edited entity has status) */}
+                                        {editingResident && residentForm.status && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Status:</span>
+                                                {residentForm.status === 'active' && <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">✅ Active</span>}
+                                                {residentForm.status === 'moved_out' && <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">📦 Moved Out</span>}
                                             </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    Last Name
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={residentForm.lastName}
-                                                    onChange={(e) => updateResidentField('lastName', e.target.value)}
-                                                    className="input w-full"
-                                                    placeholder="Doe"
-                                                />
-                                            </div>
-                                        </div>
+                                        )}
 
-                                        {/* Contact Row */}
-                                        <div className="grid grid-cols-2 gap-3">
+                                        {/* Adaptive Name Fields */}
+                                        {residentForm.entityType === 'location' ? (
+                                            /* Location: Display Name */
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📞 Phone
+                                                    📍 Display Name *
                                                 </label>
                                                 <input
-                                                    type="tel"
-                                                    value={residentForm.phone}
-                                                    onChange={(e) => updateResidentField('phone', e.target.value)}
+                                                    type="text"
+                                                    value={residentForm.displayName}
+                                                    onChange={(e) => updateResidentField('displayName', e.target.value)}
                                                     className="input w-full"
-                                                    placeholder="555-0123"
+                                                    placeholder="Kitchen, Living Room, etc."
                                                 />
                                             </div>
+                                        ) : (
+                                            /* Person: First Name + Last Name */
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        First Name *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={residentForm.firstName}
+                                                        onChange={(e) => updateResidentField('firstName', e.target.value)}
+                                                        className="input w-full"
+                                                        placeholder="John"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        Last Name
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={residentForm.lastName}
+                                                        onChange={(e) => updateResidentField('lastName', e.target.value)}
+                                                        className="input w-full"
+                                                        placeholder="Doe"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Contact Row - Only for people */}
+                                        {residentForm.entityType !== 'location' && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        📞 Phone
+                                                    </label>
+                                                    <input
+                                                        type="tel"
+                                                        value={residentForm.phone}
+                                                        onChange={(e) => updateResidentField('phone', e.target.value)}
+                                                        className="input w-full"
+                                                        placeholder="555-0123"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        📍 Room
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={residentForm.room}
+                                                        onChange={(e) => updateResidentField('room', e.target.value)}
+                                                        className="input w-full"
+                                                        placeholder="Room 101"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Room - For locations */}
+                                        {residentForm.entityType === 'location' && (
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📍 Room
+                                                    📍 Location ID / Room
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={residentForm.room}
                                                     onChange={(e) => updateResidentField('room', e.target.value)}
                                                     className="input w-full"
-                                                    placeholder="Room 101"
+                                                    placeholder="kitchen, livingroom, etc."
                                                 />
                                             </div>
-                                        </div>
+                                        )}
 
-                                        {/* Country */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                🌍 Country of Origin
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowCountryPicker(true)}
-                                                className="input w-full text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            >
-                                                <span className="text-xl">{getCountryFlag(residentForm.country)}</span>
-                                                <span className={residentForm.country ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
-                                                    {residentForm.country || 'Select country...'}
-                                                </span>
-                                            </button>
-                                        </div>
-
-                                        {/* Dates Row */}
-                                        <div className="grid grid-cols-2 gap-3">
+                                        {/* Country - Only for people */}
+                                        {residentForm.entityType !== 'location' && (
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📅 Move-in Date
+                                                    🌍 Country of Origin
                                                 </label>
-                                                <input
-                                                    type="date"
-                                                    value={residentForm.moveInDate}
-                                                    onChange={(e) => updateResidentField('moveInDate', e.target.value)}
-                                                    className="input w-full"
-                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCountryPicker(true)}
+                                                    className="input w-full text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                >
+                                                    <span className="text-xl">{getCountryFlag(residentForm.country)}</span>
+                                                    <span className={residentForm.country ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
+                                                        {residentForm.country || 'Select country...'}
+                                                    </span>
+                                                </button>
                                             </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📅 Move-out Date
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    value={residentForm.moveOutDate}
-                                                    onChange={(e) => updateResidentField('moveOutDate', e.target.value)}
-                                                    className="input w-full"
-                                                />
+                                        )}
+
+                                        {/* Dates Row - Only for people */}
+                                        {residentForm.entityType !== 'location' && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        📅 Move-in Date
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={residentForm.moveInDate}
+                                                        onChange={(e) => updateResidentField('moveInDate', e.target.value)}
+                                                        className="input w-full"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                        📅 Move-out Date
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={residentForm.moveOutDate}
+                                                        onChange={(e) => updateResidentField('moveOutDate', e.target.value)}
+                                                        className="input w-full"
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
 
                                         {/* Tags */}
                                         <div>
@@ -887,7 +966,11 @@ export default function AdminPanel({
                                         <button
                                             onClick={handleSaveResident}
                                             className="btn btn-primary flex-1"
-                                            disabled={!residentForm.firstName.trim()}
+                                            disabled={
+                                                residentForm.entityType === 'location'
+                                                    ? !residentForm.displayName.trim()
+                                                    : !residentForm.firstName.trim()
+                                            }
                                         >
                                             {editingResident ? 'Save Changes' : 'Add Person'}
                                         </button>
