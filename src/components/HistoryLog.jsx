@@ -11,6 +11,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [deleteWithRestore, setDeleteWithRestore] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const formatDate = (date) => {
         if (!date) return 'Unknown';
@@ -268,8 +269,17 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                                 {log.action.replace('-', ' ')}
                             </span>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-                            {log.quantity > 0 ? `${log.quantity}× ` : ''}{log.itemName}
+                        <p className="text-gray-600 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+                            <span>{log.quantity > 0 ? `${log.quantity}× ` : ''}{log.itemName}</span>
+                            {/* Stock Transition */}
+                            {log.newStock !== undefined && (log.action === 'used' || log.action === 'restocked') && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 font-mono">
+                                    {log.action === 'used'
+                                        ? `${log.newStock + log.quantity}→${log.newStock}`
+                                        : `${log.newStock - log.quantity}→${log.newStock}`
+                                    }
+                                </span>
+                            )}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-2">
                             <span>{formatDate(log.date)}</span>
@@ -311,20 +321,75 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
     return (
         <div className="space-y-4">
-            {dateGroups.map(([date, dateLogs]) => (
-                <SearchableSection
-                    key={date}
-                    title={date}
-                    icon="📅"
-                    defaultExpanded={date === formatDate(new Date())}
-                    searchPlaceholder="Search activities..."
-                    items={dateLogs}
-                    renderItem={renderLogItem}
-                    filterFunction={filterLog}
-                    emptyMessage="No activities found"
-                    count={dateLogs.length}
-                />
-            ))}
+            {/* Global Search Bar */}
+            <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 pb-2 pt-1">
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search activities..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-0 transition-colors shadow-sm"
+                    />
+                    <svg
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                        >
+                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {dateGroups.map(([date, dateLogs]) => {
+                // Filter logs for this date group based on global search
+                const filteredLogs = searchTerm.trim()
+                    ? dateLogs.filter(log => filterLog(log, searchTerm))
+                    : dateLogs;
+
+                if (filteredLogs.length === 0 && searchTerm.trim()) return null;
+
+                return (
+                    <SearchableSection
+                        key={date}
+                        title={date}
+                        icon="📅"
+                        defaultExpanded={true} // Always expand when searching
+                        items={filteredLogs}
+                        renderItem={renderLogItem}
+                        hideSearch={true} // Hide internal search bars
+                        emptyMessage="No activities matched"
+                        count={filteredLogs.length}
+                    />
+                );
+            })}
+
+            {/* Empty State for Search */}
+            {searchTerm.trim() && dateGroups.every(([_, logs]) =>
+                logs.filter(log => filterLog(log, searchTerm)).length === 0
+            ) && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="text-4xl mb-3">🔍</div>
+                        <p className="text-gray-500">No matching activities found for "{searchTerm}"</p>
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="mt-2 text-primary-500 font-bold hover:underline"
+                        >
+                            Clear Search
+                        </button>
+                    </div>
+                )}
         </div>
     );
 }

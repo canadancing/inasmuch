@@ -24,16 +24,18 @@ export default function SearchableSection({
     filterFunction,
     emptyMessage = 'No items found',
     count,
-    headerActions
+    headerActions,
+    hideSearch = false
 }) {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Filter items based on search
+    // Filter items based on search (only if internal search is enabled)
     const filteredItems = useMemo(() => {
+        if (hideSearch) return items; // External filtering if search hidden
         if (!searchTerm.trim()) return items;
         return items.filter(item => filterFunction(item, searchTerm));
-    }, [items, searchTerm, filterFunction]);
+    }, [items, searchTerm, filterFunction, hideSearch]);
 
     const displayCount = count !== undefined ? count : filteredItems.length;
 
@@ -85,7 +87,7 @@ export default function SearchableSection({
             >
                 <div className="space-y-3">
                     {/* Search Bar */}
-                    {isExpanded && items.length > 0 && (
+                    {isExpanded && !hideSearch && items.length > 0 && (
                         <div className="relative">
                             <input
                                 type="text"

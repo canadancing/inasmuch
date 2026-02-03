@@ -89,7 +89,12 @@ export default function AdminView({
 
             {/* Tab Content */}
             {activeTab === 'stats' && (
-                <Statistics logs={logs} items={items} residents={residents} />
+                <Statistics
+                    logs={logs}
+                    items={items}
+                    residents={residents}
+                    onRestock={onRestock}
+                />
             )}
 
             {activeTab === 'usage' && (
