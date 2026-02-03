@@ -1,7 +1,7 @@
 import ItemCard from './ItemCard';
 import AddItemCard from './AddItemCard';
 
-export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem, onConsume, onShowRecords, onAddItem }) {
+export default function ItemGrid({ items, selectedItem, onSelectItem, showStockOnly = false, displayMode = 'grid', onHideItem, onConsume, onShowRecords, onAddItem, onRestock }) {
     if (items.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -39,11 +39,20 @@ export default function ItemGrid({ items, selectedItem, onSelectItem, showStockO
                                 {item.currentStock}
                             </div>
                             {/* Restock Button */}
-                            <div className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                            </div>
+                            {onRestock && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRestock(item);
+                                    }}
+                                    className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-primary-600"
+                                    title="Restock Item"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                </button>
+                            )}
                             {/* Consumption Button */}
                             {onConsume && (
                                 <button
@@ -96,6 +105,7 @@ export default function ItemGrid({ items, selectedItem, onSelectItem, showStockO
                     onHideItem={onHideItem}
                     onConsume={onConsume}
                     onShowRecords={onShowRecords}
+                    onRestock={onRestock}
                 />
             ))}
         </div>

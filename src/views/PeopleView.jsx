@@ -5,16 +5,16 @@ import AddPersonModal from '../components/AddPersonModal';
 import StatusBadge from '../components/StatusBadge';
 import MoveOutModal from '../components/MoveOutModal';
 
-export default function PeopleView({ residents = [], logs = [], onAddResident, onUpdateResident, tags = [] }) {
-    const [viewMode, setViewMode] = useState('analytics'); // 'analytics' or 'manage'
+export default function PeopleView({ residents = [], logs = [], onAddResident, onUpdateResident, onDeleteResident, tags = [] }) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all'); // 'all', 'resident', 'common_area', 'staff'
+    const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'residents', 'guests', 'staff', 'locations'
     const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'moved_out', 'all_statuses'
     const [selectedEntity, setSelectedEntity] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showMoveOutModal, setShowMoveOutModal] = useState(false);
     const [moveOutEntity, setMoveOutEntity] = useState(null);
+
 
     // Transform residents into entities with calculated stats
     const entities = useMemo(() => {
@@ -26,7 +26,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
             // 4. Fallback to 'Unknown'
             const fullName = resident.displayName ||
                 resident.name ||
-                `${resident.firstName || ''} ${resident.lastName || ''}`.trim() ||
+                `${resident.firstName || ''}  ${resident.lastName || ''}`.trim() ||
                 'Unknown';
 
             // Get all logs for this resident
@@ -58,26 +58,21 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
             if (recentUses >= 10) activityLevel = 'high';
             else if (recentUses >= 5) activityLevel = 'medium';
 
-            // Determine type based on entityType field, tags, or name pattern
-            let type = 'resident';
-            const lowerName = fullName.toLowerCase();
-            const residentTags = Array.isArray(resident.tags) ? resident.tags.map(t => t.toLowerCase()) : [];
-
-            // Check explicit entityType field first
-            if (resident.entityType === 'location') {
-                type = 'common_area';
-            } else if (resident.entityType === 'person') {
-                // Then check tags for person roles
-                if (residentTags.includes('staff')) type = 'staff';
-                else if (residentTags.includes('donor')) type = 'donor';
-                else type = 'resident';
-            } else {
-                // Fallback: auto-detect from tags and name
-                if (residentTags.includes('staff')) type = 'staff';
-                else if (residentTags.includes('donor')) type = 'donor';
-                else if (lowerName.includes('kitchen') || lowerName.includes('bathroom') ||
-                    lowerName.includes('basement') || lowerName.includes('living') ||
-                    residentTags.includes('common')) type = 'common_area';
+            // Use primaryRole from entity data, with fallback detection
+            let primaryRole = resident.primaryRole;
+            if (!primaryRole) {
+                // Fallback: detect from entityType and tags
+                if (resident.entityType === 'location') {
+                    primaryRole = 'common'; // Default for locations
+                } else {
+                    // For people, check tags
+                    const residentTags = Array.isArray(resident.tags) ? resident.tags : [];
+                    if (residentTags.includes('staff')) primaryRole = 'staff';
+                    else if (residentTags.includes('donor')) primaryRole = 'donor';
+                    else if (residentTags.includes('guest')) primaryRole = 'guest';
+                    else if (residentTags.includes('temporary')) primaryRole = 'temporary';
+                    else primaryRole = 'resident';
+                }
             }
 
             return {
@@ -86,17 +81,31 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 totalUses,
                 lastActive,
                 activityLevel,
-                type,
+                primaryRole, // Use primaryRole instead of type
                 avatar: fullName.charAt(0).toUpperCase()
             };
         });
     }, [residents, logs]);
 
+
     // Filter entities
     const filteredEntities = useMemo(() => {
         return entities.filter(entity => {
             const matchesSearch = entity.name.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesFilter = filterType === 'all' || entity.type === filterType;
+
+            // Role-based filtering
+            let matchesRole = true;
+            if (roleFilter !== 'all') {
+                if (roleFilter === 'residents') {
+                    matchesRole = entity.primaryRole === 'resident' || entity.primaryRole === 'temporary';
+                } else if (roleFilter === 'guests') {
+                    matchesRole = entity.primaryRole === 'guest' || entity.primaryRole === 'temporary';
+                } else if (roleFilter === 'staff') {
+                    matchesRole = entity.primaryRole === 'staff' || entity.primaryRole === 'donor' || entity.primaryRole === 'volunteer';
+                } else if (roleFilter === 'locations') {
+                    matchesRole = ['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(entity.primaryRole);
+                }
+            }
 
             // Status filter
             const entityStatus = entity.status || 'active';
@@ -104,18 +113,19 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 (statusFilter === 'active' && entityStatus === 'active') ||
                 (statusFilter === 'moved_out' && entityStatus === 'moved_out');
 
-            return matchesSearch && matchesFilter && matchesStatus;
+            return matchesSearch && matchesRole && matchesStatus;
         });
-    }, [entities, searchQuery, filterType, statusFilter]);
+    }, [entities, searchQuery, roleFilter, statusFilter]);
 
     // Stats overview
     const stats = useMemo(() => {
         return {
             total: entities.length,
-            residents: entities.filter(e => e.type === 'resident').length,
-            commonAreas: entities.filter(e => e.type === 'common_area').length,
-            staff: entities.filter(e => e.type === 'staff' || e.type === 'donor').length,
-            mostActive: entities.sort((a, b) => b.totalUses - a.totalUses)[0]
+            residents: entities.filter(e => ['resident', 'temporary'].includes(e.primaryRole)).length,
+            guests: entities.filter(e => e.primaryRole === 'guest').length,
+            locations: entities.filter(e => ['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(e.primaryRole)).length,
+            staff: entities.filter(e => ['staff', 'donor', 'volunteer'].includes(e.primaryRole)).length,
+            mostActive: [...entities].sort((a, b) => b.totalUses - a.totalUses)[0]
         };
     }, [entities]);
 
@@ -151,28 +161,6 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                     </p>
                 </div>
 
-                {/* View Mode Tabs */}
-                <div className="mb-8 flex space-x-4">
-                    <button
-                        onClick={() => setViewMode('analytics')}
-                        className={`px-6 py-3 rounded-xl text-lg font-bold transition-all ${viewMode === 'analytics'
-                            ? 'bg-primary-600 text-white shadow-lg'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                    >
-                        Analytics
-                    </button>
-                    <button
-                        onClick={() => setViewMode('manage')}
-                        className={`px-6 py-3 rounded-xl text-lg font-bold transition-all ${viewMode === 'manage'
-                            ? 'bg-primary-600 text-white shadow-lg'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                    >
-                        Manage
-                    </button>
-                </div>
-
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
@@ -184,12 +172,12 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                         <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Residents</div>
                     </div>
                     <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800">
-                        <div className="text-3xl font-black text-purple-600 dark:text-purple-400">{stats.commonAreas}</div>
-                        <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Common Areas</div>
+                        <div className="text-3xl font-black text-purple-600 dark:text-purple-400">{stats.guests}</div>
+                        <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Guests</div>
                     </div>
                     <div className="p-4 rounded-xl bg-pink-50 dark:bg-pink-900/20 border-2 border-pink-200 dark:border-pink-800">
-                        <div className="text-3xl font-black text-pink-600 dark:text-pink-400">{stats.staff}</div>
-                        <div className="text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wide">Staff/Donors</div>
+                        <div className="text-3xl font-black text-pink-600 dark:text-pink-400">{stats.locations}</div>
+                        <div className="text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wide">Locations</div>
                     </div>
                 </div>
 
@@ -209,9 +197,9 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 )}
 
                 {/* Search and Filters */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex flex-col gap-4 mb-6">
                     {/* Search */}
-                    <div className="flex-1 relative">
+                    <div className="relative w-full">
                         <input
                             type="text"
                             placeholder="Search people and locations..."
@@ -225,10 +213,10 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
-                            onClick={() => setFilterType('all')}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${filterType === 'all'
+                            onClick={() => setRoleFilter('all')}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'all'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
@@ -236,31 +224,40 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                             All
                         </button>
                         <button
-                            onClick={() => setFilterType('resident')}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${filterType === 'resident'
+                            onClick={() => setRoleFilter('residents')}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'residents'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            Residents
+                            🏠 Residents
                         </button>
                         <button
-                            onClick={() => setFilterType('common_area')}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${filterType === 'common_area'
+                            onClick={() => setRoleFilter('guests')}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'guests'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            Areas
+                            🎒 Guests
                         </button>
                         <button
-                            onClick={() => setFilterType('staff')}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${filterType === 'staff'
+                            onClick={() => setRoleFilter('locations')}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'locations'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            Staff
+                            📍 Locations
+                        </button>
+                        <button
+                            onClick={() => setRoleFilter('staff')}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'staff'
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            💼 Staff
                         </button>
 
                         {/* Divider */}
@@ -321,6 +318,8 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                                 key={entity.id}
                                 entity={entity}
                                 onClick={() => handleEntityClick(entity)}
+                                onMoveOut={() => handleMoveOutClick(entity)}
+                                onReactivate={() => handleReactivate(entity.id)}
                             />
                         ))}
                     </div>
@@ -343,6 +342,9 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 }}
                 entity={selectedEntity}
                 logs={logs}
+                onUpdate={onUpdateResident}
+                onDelete={onDeleteResident}
+                tags={tags}
             />
 
             {/* Add Person Modal */}

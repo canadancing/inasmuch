@@ -1,36 +1,8 @@
 import { useMemo } from 'react';
+import RoleBadge from './RoleBadge';
 
-export default function EntityCard({ entity, onClick }) {
-    const { name, type, totalUses, activityLevel, lastActive, avatar } = entity;
-
-    const typeConfig = {
-        resident: {
-            label: '🏠 Resident',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-            borderColor: 'border-blue-200 dark:border-blue-800',
-            textColor: 'text-blue-600 dark:text-blue-400'
-        },
-        common_area: {
-            label: '📍 Common Area',
-            bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-            borderColor: 'border-emerald-200 dark:border-emerald-800',
-            textColor: 'text-emerald-600 dark:text-emerald-400'
-        },
-        staff: {
-            label: '👔 Staff',
-            bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-            borderColor: 'border-purple-200 dark:border-purple-800',
-            textColor: 'text-purple-600 dark:text-purple-400'
-        },
-        donor: {
-            label: '💝 Donor',
-            bgColor: 'bg-pink-50 dark:bg-pink-900/20',
-            borderColor: 'border-pink-200 dark:border-pink-800',
-            textColor: 'text-pink-600 dark:text-pink-400'
-        }
-    };
-
-    const config = typeConfig[type] || typeConfig.resident;
+export default function EntityCard({ entity, onClick, viewMode = 'analytics', onMoveOut, onReactivate }) {
+    const { name, primaryRole, totalUses, activityLevel, lastActive, avatar, expectedDepartureDate, status } = entity;
 
     // Activity bar calculation (0-5 bars based on level)
     const activityBars = useMemo(() => {
@@ -53,43 +25,112 @@ export default function EntityCard({ entity, onClick }) {
         return new Date(date).toLocaleDateString();
     };
 
+    // Format expected departure date
+    const formatDepartureDate = (dateStr) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+
+        if (diff < 0) return `Left ${Math.abs(diff)}d ago`;
+        if (diff === 0) return 'Leaving today';
+        if (diff === 1) return 'Leaving tomorrow';
+        if (diff <= 7) return `Leaving in ${diff} days`;
+        return `Leaving ${date.toLocaleDateString()}`;
+    };
+
+    // Determine card styling based on role category
+    const isLocation = ['common', 'bathroom', 'bedroom', 'utility', 'outdoor'].includes(primaryRole);
+    const borderColor = isLocation
+        ? 'border-purple-200 dark:border-purple-800'
+        : 'border-blue-200 dark:border-blue-800';
+    const bgColor = isLocation
+        ? 'bg-purple-50 dark:bg-purple-900/20'
+        : 'bg-blue-50 dark:bg-blue-900/20';
+
+    const isMovedOut = status === 'moved_out';
+
     return (
         <div
-            onClick={onClick}
-            className={`p-5 rounded-2xl border-2 ${config.borderColor} ${config.bgColor} hover:scale-[1.02] transition-all cursor-pointer`}
+            className={`p-3 rounded-xl border-2 ${borderColor} ${bgColor} hover:scale-[1.02] transition-all cursor-pointer relative`}
         >
-            {/* Avatar */}
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`w-14 h-14 rounded-full ${config.textColor} bg-white dark:bg-gray-800 flex items-center justify-center text-2xl font-black border-2 ${config.borderColor}`}>
+            {/* Management Actions - Always Visible */}
+            <div className="flex gap-2 mb-3">
+                {isMovedOut ? (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onReactivate?.();
+                        }}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                    >
+                        ↩️ Reactivate
+                    </button>
+                ) : (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onMoveOut?.();
+                        }}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                    >
+                        📦 Move Out
+                    </button>
+                )}
+            </div>
+
+            {/* Avatar and Name - Always Clickable */}
+            <div
+                className="flex items-center gap-2 mb-3"
+                onClick={onClick}
+            >
+                <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-black text-lg border-2 ${borderColor}`}>
                     {avatar || name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white truncate">
+                    <h3 className="text-base font-black text-gray-900 dark:text-white truncate">
                         {name}
                     </h3>
-                    <p className={`text-xs font-semibold ${config.textColor}`}>
-                        {config.label}
-                    </p>
+                    <div className="mt-0.5">
+                        <RoleBadge role={primaryRole} size="sm" />
+                    </div>
                 </div>
             </div>
 
-            {/* Stats */}
-            <div className="space-y-2">
+            {/* Expected Departure Date - for temporary/guest */}
+            {expectedDepartureDate && (primaryRole === 'guest' || primaryRole === 'temporary') && (
+                <div className="mb-2 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center gap-1">
+                        <span className="text-sm">📅</span>
+                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                            {formatDepartureDate(expectedDepartureDate)}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* Stats - Always Clickable */}
+            <div
+                className="space-y-1.5"
+                onClick={onClick}
+            >
                 <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Total uses:</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{totalUses || 0}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Total uses:</span>
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">{totalUses || 0}</span>
                 </div>
 
                 {/* Activity Level */}
                 <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Activity:</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Activity:</span>
                     <div className="flex gap-1">
                         {activityBars.map((filled, i) => (
                             <div
                                 key={i}
-                                className={`w-2 h-4 rounded ${filled
-                                        ? `${config.textColor.replace('text-', 'bg-')}`
-                                        : 'bg-gray-200 dark:bg-gray-700'
+                                className={`w-1.5 h-3 rounded ${filled
+                                    ? isLocation
+                                        ? 'bg-purple-500 dark:bg-purple-400'
+                                        : 'bg-blue-500 dark:bg-blue-400'
+                                    : 'bg-gray-200 dark:bg-gray-700'
                                     }`}
                             />
                         ))}
@@ -97,9 +138,9 @@ export default function EntityCard({ entity, onClick }) {
                 </div>
 
                 {/* Last Active */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-1.5 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Last active: {formatLastActive(lastActive)}
+                        Last: {formatLastActive(lastActive)}
                     </span>
                 </div>
             </div>

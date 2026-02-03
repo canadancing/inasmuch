@@ -16,6 +16,8 @@ import PeopleView from './views/PeopleView';
 import AccessRequestModal from './components/AccessRequestModal';
 import SuperAdminView from './views/SuperAdminView';
 import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
+// Import utility for fixing location roles (available in browser console as window.fixLocationRoles)
+import './utils/fixLocationRoles';
 
 export default function App({ user, loading, loginWithGoogle, loginWithEmail, registerWithEmail, linkGoogleAccount, linkEmailAccount, unlinkGoogleAccount, unlinkEmailAccount, logout, isAdmin, isSuperAdmin, role, requestAdminAccess, isDark, toggleTheme, rememberMe, toggleRememberMe, error }) {
     const [currentView, setCurrentView] = useState('stock');
@@ -197,6 +199,7 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                         logs={logs}
                         onAddResident={addResident}
                         onUpdateResident={updateResident}
+                        onDeleteResident={deleteResident}
                         tags={tags}
                     />
                 ) : currentView === 'stock' ? (
@@ -210,6 +213,10 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                         onLog={(resId, resName, itemId, itemName, action, qty, date) => addLog(resId, resName, itemId, itemName, action, qty, date)}
                         onAddResident={addResident}
                         onAddItem={addItem}
+                        onUpdateItem={updateItem}
+                        onDeleteItem={deleteItem}
+                        onUpdateLog={updateLog}
+                        onDeleteLog={deleteLog}
                         setCurrentView={setCurrentView}
                         customIcons={customIcons}
                         tags={tags}

@@ -2,10 +2,26 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId }) {
+export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId, onUpdateItem, onDeleteItem, onUpdateLog, onDeleteLog, tags = [] }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('usage'); // 'usage', 'statistics'
+    const [activeTab, setActiveTab] = useState('usage'); // 'usage', 'statistics', 'details'
+    const [isEditing, setIsEditing] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [editingLogId, setEditingLogId] = useState(null);
+    const [editingLogData, setEditingLogData] = useState(null);
+    const [deleteLogId, setDeleteLogId] = useState(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        icon: '',
+        location: '',
+        currentStock: 0,
+        minStock: 0,
+        maxStock: 0,
+        unit: '',
+        tags: [],
+        notes: ''
+    });
 
     const fetchRecords = useCallback(async () => {
         if (!item || !currentInventoryId) {
@@ -76,6 +92,95 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             hour: '2-digit',
             minute: '2-digit'
         }).format(date);
+    };
+
+    // Edit mode handlers
+    const startEditing = () => {
+        setFormData({
+            name: item.name || '',
+            icon: item.icon || '📦',
+            location: item.location || '',
+            currentStock: item.currentStock || 0,
+            minStock: item.minStock || 0,
+            maxStock: item.maxStock || 0,
+            unit: item.unit || 'units',
+            tags: item.tags || [],
+            notes: item.notes || ''
+        });
+        setIsEditing(true);
+        setActiveTab('details');
+    };
+
+    const handleChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleTagToggle = (tag) => {
+        setFormData(prev => ({
+            ...prev,
+            tags: prev.tags.includes(tag)
+                ? prev.tags.filter(t => t !== tag)
+                : [...prev.tags, tag]
+        }));
+    };
+
+    const handleSave = async () => {
+        if (!formData.name.trim()) {
+            alert('Item name is required');
+            return;
+        }
+        await onUpdateItem(item.id, formData);
+        setIsEditing(false);
+        setActiveTab('usage');
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setActiveTab('usage');
+        setFormData({
+            name: '',
+            icon: '',
+            location: '',
+            currentStock: 0,
+            minStock: 0,
+            maxStock: 0,
+            unit: '',
+            tags: [],
+            notes: ''
+        });
+    };
+
+    const handleDelete = async () => {
+        // Soft delete: mark as deleted instead of removing
+        await onDeleteItem(item.id);
+        setShowDeleteConfirm(false);
+        onClose();
+    };
+
+    // Log entry CRUD handlers
+    const startEditingLog = (record) => {
+        setEditingLogId(record.id);
+        setEditingLogData({
+            quantity: record.quantity || 0,
+            note: record.note || ''
+        });
+    };
+
+    const handleSaveLog = async () => {
+        if (!editingLogData.quantity || editingLogData.quantity < 1) {
+            alert('Quantity must be at least 1');
+            return;
+        }
+        await onUpdateLog(editingLogId, editingLogData);
+        setEditingLogId(null);
+        setEditingLogData(null);
+        await fetchRecords(); // Refresh records
+    };
+
+    const handleDeleteLog = async () => {
+        await onDeleteLog(deleteLogId);
+        setDeleteLogId(null);
+        await fetchRecords(); // Refresh records  
     };
 
     // Calculate statistics from records
@@ -185,36 +290,75 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* Edit Button */}
+                            {onUpdateItem && !isEditing && (
+                                <button
+                                    onClick={startEditing}
+                                    className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+                                    title="Edit Item"
+                                >
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                            )}
+                            {/* Delete Button */}
+                            {onDeleteItem && !isEditing && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                    title="Delete Item"
+                                >
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            )}
+                            <button
+                                onClick={onClose}
+                                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Tabs */}
                     <div className="flex gap-2">
                         <button
-                            onClick={() => setActiveTab('usage')}
+                            onClick={() => !isEditing && setActiveTab('usage')}
+                            disabled={isEditing}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'usage'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                }`}
+                                } ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             Usage History
                         </button>
                         <button
-                            onClick={() => setActiveTab('statistics')}
+                            onClick={() => !isEditing && setActiveTab('statistics')}
+                            disabled={isEditing}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'statistics'
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                }`}
+                                } ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             📊 Statistics
                         </button>
+                        {isEditing && (
+                            <button
+                                onClick={() => setActiveTab('details')}
+                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'details'
+                                    ? 'bg-primary-500 text-white'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    }`}
+                            >
+                                ✏️ Edit Details
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -223,6 +367,163 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    ) : activeTab === 'details' ? (
+                        /* Details/Edit Tab */
+                        <div className="space-y-6">
+                            {/* Item Name & Icon */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Item Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => handleChange('name', e.target.value)}
+                                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Icon
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-4xl">{formData.icon}</div>
+                                        <input
+                                            type="text"
+                                            value={formData.icon}
+                                            onChange={(e) => handleChange('icon', e.target.value)}
+                                            className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            placeholder="📦"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Location */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    📍 Location
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.location}
+                                    onChange={(e) => handleChange('location', e.target.value)}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    placeholder="e.g., Kitchen, Bathroom, Pantry"
+                                />
+                            </div>
+
+                            {/* Stock Levels */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Current Stock
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.currentStock}
+                                        onChange={(e) => handleChange('currentStock', parseInt(e.target.value) || 0)}
+                                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                        min="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Min Stock
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.minStock}
+                                        onChange={(e) => handleChange('minStock', parseInt(e.target.value) || 0)}
+                                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                        min="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Max Stock
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.maxStock}
+                                        onChange={(e) => handleChange('maxStock', parseInt(e.target.value) || 0)}
+                                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Unit */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Unit
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.unit}
+                                    onChange={(e) => handleChange('unit', e.target.value)}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    placeholder="e.g., units, rolls, bottles"
+                                />
+                            </div>
+
+                            {/* Tags */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    🏷️ Tags
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {tags.map(tag => (
+                                        <button
+                                            key={tag.name}
+                                            type="button"
+                                            onClick={() => handleTagToggle(tag.name)}
+                                            className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${formData.tags.includes(tag.name)
+                                                ? 'text-white'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                }`}
+                                            style={formData.tags.includes(tag.name) ? {
+                                                backgroundColor: tag.color,
+                                                color: 'white'
+                                            } : {}}
+                                        >
+                                            {tag.emoji} {tag.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    📝 Notes
+                                </label>
+                                <textarea
+                                    value={formData.notes}
+                                    onChange={(e) => handleChange('notes', e.target.value)}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    rows={3}
+                                    placeholder="Optional notes about this item..."
+                                />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="flex-1 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="flex-1 px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 transition-colors"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     ) : activeTab === 'statistics' ? (
                         /* Statistics Tab */
@@ -419,9 +720,12 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                                 </div>
                                                 {record.newStock !== undefined && (
                                                     <div className="flex items-center gap-1">
-                                                        <span>New Stock:</span>
-                                                        <span className="font-bold text-gray-900 dark:text-white">
-                                                            {record.newStock}
+                                                        <span>Stock:</span>
+                                                        <span className="font-bold font-mono text-gray-900 dark:text-white">
+                                                            {record.action === 'used' || record.action === 'consume'
+                                                                ? `${record.newStock + (record.quantity || 0)} → ${record.newStock}`
+                                                                : `${record.newStock - (record.quantity || 0)} → ${record.newStock}`
+                                                            }
                                                         </span>
                                                     </div>
                                                 )}
@@ -436,6 +740,29 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                             <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                                 {formatDate(record.timestamp)}
                                             </div>
+                                            {/* Log Entry Actions */}
+                                            {onUpdateLog && onDeleteLog && (
+                                                <div className="flex items-center gap-1 mt-2">
+                                                    <button
+                                                        onClick={() => startEditingLog(record)}
+                                                        className="p-1 rounded hover:bg-primary-100 dark:hover:bg-primary-900/30 text-primary-600 dark:text-primary-400 transition-colors"
+                                                        title="Edit Log"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteLogId(record.id)}
+                                                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                                                        title="Delete Log"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -444,15 +771,125 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={onClose}
-                        className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    >
-                        Close
-                    </button>
-                </div>
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                                Confirm Delete
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                Are you sure you want to delete <strong>{item?.name}</strong>? This will mark it as deleted but preserve its history.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Log Edit Modal */}
+                {editingLogId && editingLogData && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4">
+                                Edit Log Entry
+                            </h3>
+
+                            {/* Quantity input */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Quantity *
+                                </label>
+                                <input
+                                    type="number"
+                                    value={editingLogData.quantity}
+                                    onChange={(e) => setEditingLogData({ ...editingLogData, quantity: parseInt(e.target.value) || 0 })}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    min="1"
+                                />
+                            </div>
+
+                            {/* Note textarea */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Note
+                                </label>
+                                <textarea
+                                    value={editingLogData.note}
+                                    onChange={(e) => setEditingLogData({ ...editingLogData, note: e.target.value })}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    rows={3}
+                                    placeholder="Optional note about this log entry..."
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setEditingLogId(null); setEditingLogData(null); }}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveLog}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Log Delete Confirmation */}
+                {deleteLogId && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                                Delete Log Entry?
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                This will permanently delete this usage record. This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeleteLogId(null)}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteLog}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {!editingLogId && !isEditing && (
+                    <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={onClose}
+                            className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

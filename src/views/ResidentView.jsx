@@ -19,6 +19,10 @@ export default function ResidentView({
     user,
     onAddResident,
     onAddItem,
+    onUpdateItem,
+    onDeleteItem,
+    onUpdateLog,
+    onDeleteLog,
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [displayMode, setDisplayMode] = useState(() => {
@@ -50,8 +54,8 @@ export default function ResidentView({
     };
 
     const handleItemClick = (item) => {
-        setSelectedRestockItem(item);
-        setShowRestockModal(true);
+        setSelectedRecordsItem(item);
+        setShowRecordsModal(true);
     };
 
     const handleConsumptionClick = (item) => {
@@ -102,6 +106,11 @@ export default function ResidentView({
 
     // Filter items based on search query, stock filter, and selected items
     const filteredItems = items.filter(item => {
+        // Filter out soft-deleted items
+        if (item.deleted) {
+            return false;
+        }
+
         // Item selection filter - show all if nothing selected
         if (selectedItemIds.length > 0 && !selectedItemIds.includes(item.id)) {
             return false;
@@ -410,6 +419,10 @@ export default function ResidentView({
                         onHideItem={handleHideItem}
                         onConsume={handleConsumptionClick}
                         onShowRecords={handleShowRecords}
+                        onRestock={(item) => {
+                            setSelectedRestockItem(item);
+                            setShowRestockModal(true);
+                        }}
                         onAddItem={onAddItem ? () => setShowAddItemModal(true) : null}
                     />
                 )}
@@ -458,6 +471,11 @@ export default function ResidentView({
                 }}
                 item={selectedRecordsItem}
                 currentInventoryId={currentInventoryId}
+                onUpdateItem={onUpdateItem}
+                onDeleteItem={onDeleteItem}
+                onUpdateLog={onUpdateLog}
+                onDeleteLog={onDeleteLog}
+                tags={[]}
             />
 
             {/* Add Item Modal */}

@@ -116,6 +116,7 @@ export default function AdminView({
                     <AdminPanel
                         residents={residents}
                         items={items}
+                        logs={logs}
                         isDemo={isDemo}
                         isDark={isDark}
                         // Harmonize props to match AdminPanel expectations

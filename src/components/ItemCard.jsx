@@ -1,4 +1,4 @@
-export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, onHideItem, onConsume, onShowRecords }) {
+export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, onHideItem, onConsume, onShowRecords, onRestock }) {
     const content = (
         <>
             <div className={`text-5xl transition-transform duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>{item.icon}</div>
@@ -42,11 +42,20 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                     </button>
                 )}
                 {/* Restock (Plus) Button */}
-                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                </div>
+                {onRestock && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRestock(item);
+                        }}
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-primary-600"
+                        title="Restock Item"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                    </button>
+                )}
                 {/* Hide Button */}
                 {onHideItem && (
                     <button

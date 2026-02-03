@@ -8,6 +8,7 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    getDoc,
     serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -184,6 +185,18 @@ export function useFirestore(user) {
             return;
         }
 
+        // Get current stock first to save in log
+        const item = items.find(i => i.id === itemId);
+        let newStock = item?.currentStock || 0;
+
+        if (item) {
+            if (action === 'used') {
+                newStock = Math.max(0, item.currentStock - parseInt(qty));
+            } else if (action === 'restocked') {
+                newStock = item.currentStock + parseInt(qty);
+            }
+        }
+
         const logsRef = collection(db, 'inventories', currentInventoryId, 'logs');
         const logDoc = {
             residentId: resId,
@@ -192,6 +205,7 @@ export function useFirestore(user) {
             itemName,
             action,
             quantity: parseInt(qty),
+            newStock, // Save the NEW stock level in the log for history tracking
             date: date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date(date)),
             performedBy: user?.uid,
             performedByName: user?.displayName || 'Unknown'
@@ -204,20 +218,13 @@ export function useFirestore(user) {
             logId: docRef.id,
             residentName: resName,
             itemName,
-            quantity: qty
+            quantity: qty,
+            newStock
         });
 
         // Update item stock
-        const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
-        const item = items.find(i => i.id === itemId);
         if (item) {
-            let newStock = item.currentStock;
-            if (action === 'used') {
-                newStock = Math.max(0, item.currentStock - parseInt(qty));
-            } else if (action === 'restocked') {
-                newStock = item.currentStock + parseInt(qty);
-            }
-
+            const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
             await updateDoc(itemDocRef, {
                 currentStock: newStock,
                 updatedAt: serverTimestamp(),
@@ -230,6 +237,7 @@ export function useFirestore(user) {
                 itemName,
                 action,
                 quantity: qty,
+                newStock,
                 note: `Stock auto-adjusted via usage log`
             });
         }
@@ -289,7 +297,7 @@ export function useFirestore(user) {
         });
     };
 
-    // Delete item (owner only)
+    // Delete item (owner only) - soft delete to preserve history
     const deleteItem = async (itemId) => {
         if (!permissions?.canDelete) {
             console.warn('Permission denied: Only the owner can delete items');
@@ -299,7 +307,12 @@ export function useFirestore(user) {
         const item = items.find(i => i.id === itemId);
         const itemName = item?.name || 'Item';
         const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
-        await deleteDoc(itemDocRef);
+
+        // Soft delete: mark as deleted instead of removing
+        await updateDoc(itemDocRef, {
+            deleted: true,
+            deletedAt: new Date()
+        });
 
         // Log this action in Audit Trail
         await addAuditEntry('deleted-item', {
@@ -350,7 +363,7 @@ export function useFirestore(user) {
         const resName = updates.firstName ? `${updates.firstName} ${updates.lastName || ''}`.trim() : (residents.find(r => r.id === residentId)?.firstName || 'Resident');
         await addAuditEntry('resident-updated', {
             residentId,
-            residentName,
+            residentName: resName,
             updates: Object.keys(updates)
         });
     };
@@ -381,19 +394,54 @@ export function useFirestore(user) {
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
         const logEntry = logs.find(l => l.id === logId);
 
+        if (!logEntry) return;
+
+        // Calculate stock adjustment if quantity changed
+        const oldQty = logEntry.quantity || 0;
+        const newQty = updates.quantity !== undefined ? updates.quantity : oldQty;
+        const qtyDiff = newQty - oldQty;
+
+        // Update the log entry
         await updateDoc(logRef, {
             ...updates,
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
 
+        // Update item stock if quantity changed
+        if (qtyDiff !== 0 && logEntry.itemId) {
+            const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
+            const itemSnapshot = await getDoc(itemRef);
+
+            if (itemSnapshot.exists()) {
+                const currentStock = itemSnapshot.data().currentStock || 0;
+                let newStock = currentStock;
+
+                // Adjust stock based on action type
+                if (logEntry.action === 'used' || logEntry.action === 'consume') {
+                    // Used/consume reduces stock, so if qty increased, reduce more
+                    newStock = currentStock - qtyDiff;
+                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock') {
+                    // Restock increases stock, so if qty increased, add more
+                    newStock = currentStock + qtyDiff;
+                }
+
+                await updateDoc(itemRef, {
+                    currentStock: Math.max(0, newStock),
+                    updatedAt: serverTimestamp(),
+                    updatedBy: user?.uid
+                });
+            }
+        }
+
         // Audit the fact that a history entry was modified
         await addAuditEntry('usage-log-edited', {
             logId,
             itemName: logEntry?.itemName || 'Unknown',
             residentName: logEntry?.residentName || 'Unknown',
-            originalQuantity: logEntry?.quantity,
-            newQuantity: updates.quantity,
+            originalQuantity: oldQty,
+            newQuantity: newQty,
+            stockAdjustment: qtyDiff,
             fieldsModified: Object.keys(updates)
         });
     };
@@ -405,6 +453,35 @@ export function useFirestore(user) {
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
         const logEntry = logs.find(l => l.id === logId);
 
+        if (!logEntry) return;
+
+        // Restore stock by reversing the log's action
+        if (logEntry.itemId && logEntry.quantity) {
+            const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
+            const itemSnapshot = await getDoc(itemRef);
+
+            if (itemSnapshot.exists()) {
+                const currentStock = itemSnapshot.data().currentStock || 0;
+                let newStock = currentStock;
+
+                // Reverse the original action
+                if (logEntry.action === 'used' || logEntry.action === 'consume') {
+                    // Original action reduced stock, so add it back
+                    newStock = currentStock + logEntry.quantity;
+                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock') {
+                    // Original action increased stock, so subtract it
+                    newStock = currentStock - logEntry.quantity;
+                }
+
+                await updateDoc(itemRef, {
+                    currentStock: Math.max(0, newStock),
+                    updatedAt: serverTimestamp(),
+                    updatedBy: user?.uid
+                });
+            }
+        }
+
+        // Delete the log
         await deleteDoc(logRef);
 
         // Audit the fact that a history entry was DELETED
@@ -412,7 +489,8 @@ export function useFirestore(user) {
             logId,
             itemName: logEntry?.itemName || 'Unknown',
             residentName: logEntry?.residentName || 'Unknown',
-            quantity: logEntry?.quantity
+            quantity: logEntry?.quantity,
+            stockRestored: logEntry.quantity
         });
     };
 

@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import ResidentSelector from './ResidentSelector';
 import SearchableSection from './SearchableSection';
+import RoleBadge from './RoleBadge';
 
 export default function AdminPanel({
     residents,
     items,
+    logs = [],
     onAddResident,
     onUpdateResident,
     onRemoveResident,
@@ -30,40 +32,13 @@ export default function AdminPanel({
     onRemoveTag,
     getTagStyles
 }) {
-    const [activeTab, setActiveTab] = useState('residents');
-    const [restockResident, setRestockResident] = useState(null);
-    const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
-    // Resident form state (for add/edit modal)
-    const [showResidentModal, setShowResidentModal] = useState(false);
-    const [residentForm, setResidentForm] = useState({
-        firstName: '',
-        lastName: '',
-        phone: '',
-        room: '',
-        country: '',
-        moveInDate: '',
-        moveOutDate: '',
-        notes: '',
-        tags: ['resident']
-    });
-    const [editingResident, setEditingResident] = useState(null);
-    // Item state
-    const [newItemName, setNewItemName] = useState('');
-    const [newItemIcon, setNewItemIcon] = useState('📦');
-    const [restockItem, setRestockItem] = useState(null);
-    const [restockQuantity, setRestockQuantity] = useState(1);
-    const [showIconPicker, setShowIconPicker] = useState(false);
-    const [iconSearch, setIconSearch] = useState('');
+    const [activeTab, setActiveTab] = useState('stats');
     // Custom icon editing state
     const [newCustomIcon, setNewCustomIcon] = useState('');
     const [newCustomKeywords, setNewCustomKeywords] = useState('');
     const [editingIcon, setEditingIcon] = useState(null);
     const [editIconValue, setEditIconValue] = useState('');
     const [editKeywordsValue, setEditKeywordsValue] = useState('');
-    // Item editing state
-    const [editingItem, setEditingItem] = useState(null);
-    const [editItemName, setEditItemName] = useState('');
-    const [editItemIcon, setEditItemIcon] = useState('');
     // Tag management state
     const [newTagName, setNewTagName] = useState('');
     const [newTagColor, setNewTagColor] = useState('blue');
@@ -80,10 +55,6 @@ export default function AdminPanel({
     const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
     const [pendingAction, setPendingAction] = useState(null); // Function to run if "No" (Discard) is clicked
     const [saveAction, setSaveAction] = useState(null); // Function to run if "Save" is clicked
-
-    // Initial state for dirty checking
-    const [initialResidentForm, setInitialResidentForm] = useState(null);
-    const [initialItemState, setInitialItemState] = useState(null);
 
     // Countries with flags (emoji flags)
     const countries = [
@@ -397,230 +368,13 @@ export default function AdminPanel({
         ...customIconsList.filter(icon => !Object.keys(iconMap).includes(icon))
     ];
 
-    // Smart icon suggestion based on item name
-    useEffect(() => {
-        if (!newItemName.trim()) {
-            setNewItemIcon('📦');
-            return;
-        }
 
-        const name = newItemName.toLowerCase();
 
-        // Find matching icon (check combined map including custom icons)
-        for (const [icon, keywords] of Object.entries(combinedIconMap)) {
-            for (const keyword of keywords) {
-                if (name.includes(keyword)) {
-                    setNewItemIcon(icon);
-                    return;
-                }
-            }
-        }
 
-        // No match - keep current or use default
-    }, [newItemName, combinedIconMap]);
 
-    // Filter icons based on search
-    const filteredIcons = iconSearch.trim()
-        ? allIcons.filter(icon => {
-            const keywords = combinedIconMap[icon] || [];
-            const iconStr = icon.toLowerCase();
-            const searchLower = iconSearch.toLowerCase();
-            return keywords.some(k => k.includes(searchLower)) || iconStr.includes(searchLower);
-        })
-        : allIcons;
 
-    // Reset resident form (Force Close)
-    const resetResidentForm = () => {
-        setResidentForm({
-            entityType: 'person',
-            displayName: '',
-            firstName: '',
-            lastName: '',
-            phone: '',
-            room: '',
-            country: '',
-            moveInDate: '',
-            moveOutDate: '',
-            status: 'active',
-            notes: '',
-            tags: ['resident']
-        });
-        setEditingResident(null);
-        setShowResidentModal(false);
-        setInitialResidentForm(null);
-    };
 
-    // Attempt to close resident modal (Check for unsaved changes)
-    const attemptCloseResidentModal = () => {
-        const currentString = JSON.stringify(residentForm);
-        const initialString = JSON.stringify(initialResidentForm);
 
-        if (initialResidentForm && currentString !== initialString) {
-            // Unsaved changes detected
-            setPendingAction(() => () => resetResidentForm());
-            setSaveAction(() => () => handleSaveResident());
-            setShowUnsavedAlert(true);
-        } else {
-            // No changes, just close
-            resetResidentForm();
-        }
-    };
-
-    // Handle opening add modal
-    const openAddResidentModal = () => {
-        const emptyForm = {
-            entityType: 'person',
-            displayName: '',
-            firstName: '',
-            lastName: '',
-            phone: '',
-            room: '',
-            country: '',
-            moveInDate: '',
-            moveOutDate: '',
-            status: 'active',
-            notes: '',
-            tags: ['resident']
-        };
-        setResidentForm(emptyForm);
-        setInitialResidentForm(emptyForm);
-        setEditingResident(null);
-        setShowResidentModal(true);
-    };
-
-    // Handle opening edit modal
-    const openEditResidentModal = (resident) => {
-        // Detect entity type
-        const isLocation = resident.entityType === 'location' ||
-            (resident.tags && resident.tags.includes('common')) ||
-            (resident.displayName && !resident.firstName);
-
-        let fName = '';
-        let lName = '';
-        let displayName = '';
-
-        if (isLocation) {
-            // For locations, use displayName
-            displayName = resident.displayName || resident.name || '';
-        } else {
-            // For people, use firstName/lastName
-            fName = resident.firstName || '';
-            lName = resident.lastName || '';
-
-            // Handle legacy data where name might be combined in 'name' field
-            if (!fName && !lName && resident.name) {
-                const parts = resident.name.trim().split(' ');
-                fName = parts[0] || '';
-                lName = parts.slice(1).join(' ') || '';
-            }
-        }
-
-        const formData = {
-            entityType: resident.entityType || (isLocation ? 'location' : 'person'),
-            displayName,
-            firstName: fName,
-            lastName: lName,
-            phone: resident.phone || '',
-            room: resident.room || '',
-            country: resident.country || '',
-            moveInDate: resident.moveInDate || '',
-            moveOutDate: resident.moveOutDate || '',
-            status: resident.status || 'active',
-            notes: resident.notes || '',
-            tags: resident.tags || ['resident']
-        };
-
-        setResidentForm(formData);
-        setInitialResidentForm(formData);
-        setEditingResident(resident);
-        setShowResidentModal(true);
-    };
-
-    // Handle form field change
-    const updateResidentField = (field, value) => {
-        setResidentForm(prev => ({ ...prev, [field]: value }));
-    };
-
-    // Handle form submission (add or update)
-    const handleSaveResident = () => {
-        const isLocation = residentForm.entityType === 'location';
-
-        // Validate based on entity type
-        if (isLocation) {
-            if (!residentForm.displayName.trim()) return;
-        } else {
-            if (!residentForm.firstName.trim()) return;
-        }
-
-        if (editingResident) {
-            onUpdateResident(editingResident.id, residentForm);
-        } else {
-            onAddResident(residentForm);
-        }
-        resetResidentForm();
-    };
-
-    // Toggle tag in form
-    const toggleFormTag = (tagId) => {
-        const current = residentForm.tags || [];
-        if (current.includes(tagId)) {
-            updateResidentField('tags', current.filter(t => t !== tagId));
-        } else {
-            updateResidentField('tags', [...current, tagId]);
-        }
-    };
-
-    const handleAddItem = (e) => {
-        e.preventDefault();
-        if (newItemName.trim()) {
-            onAddItem(newItemName.trim(), newItemIcon);
-            setNewItemName('');
-            setNewItemIcon('📦');
-        }
-    };
-
-    const handleSaveItem = (item) => {
-        onUpdateItem(item.id, {
-            name: editItemName,
-            icon: editItemIcon
-        });
-        setEditingItem(null);
-    };
-
-    const attemptCancelEditItem = (item) => {
-        const currentString = JSON.stringify({ name: editItemName, icon: editItemIcon });
-        const initialString = JSON.stringify(initialItemState);
-
-        if (initialItemState && currentString !== initialString) {
-            setPendingAction(() => () => setEditingItem(null)); // Closure to clear specific item
-            setSaveAction(() => () => handleSaveItem(item));
-            setShowUnsavedAlert(true);
-        } else {
-            setEditingItem(null);
-        }
-    };
-
-    const handleRestock = () => {
-        if (restockItem && restockResident && restockQuantity > 0) {
-            const [year, month, day] = restockDate.split('-').map(Number);
-            const dateObj = new Date(year, month - 1, day);
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            if (restockDate === todayStr) {
-                const now = new Date();
-                dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-            } else {
-                dateObj.setHours(12, 0, 0, 0);
-            }
-
-            const residentFullName = `${restockResident.firstName || ''} ${restockResident.lastName || ''}`.trim() || restockResident.name || 'Unknown';
-            onRestock(restockItem.id, restockItem.name, restockQuantity, restockResident.id, residentFullName, dateObj);
-            setRestockItem(null);
-            setRestockQuantity(1);
-            setRestockResident(null);
-            setRestockDate(new Date().toISOString().split('T')[0]);
-        }
-    };
 
     const toggleTag = (tagId, currentTags, setTags) => {
         if (currentTags.includes(tagId)) {
@@ -646,9 +400,65 @@ export default function AdminPanel({
         );
     };
 
+    // Calculate dashboard statistics
+    const stats = useMemo(() => {
+        const totalItems = items.length;
+        const totalResidents = residents.length;
+
+        // Stock analysis
+        const lowStockItems = items.filter(i => i.currentStock <= (i.minStock || 0) && i.currentStock > 0);
+        const outOfStockItems = items.filter(i => i.currentStock === 0);
+        const wellStockedItems = items.filter(i => i.currentStock > (i.minStock || 0));
+
+        // Top consumed items
+        const itemUsage = {};
+        logs.forEach(log => {
+            if (log.action === 'used' && log.itemName) {
+                itemUsage[log.itemName] = (itemUsage[log.itemName] || 0) + (log.quantity || 0);
+            }
+        });
+
+        const topItems = Object.entries(itemUsage)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
+
+        // Recent trend (last 7 days vs previous 7 days)
+        const now = new Date();
+        const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+
+        const recentLogs = logs.filter(log => {
+            const logDate = log.date?.toDate?.() || new Date(log.date);
+            return logDate >= sevenDaysAgo;
+        });
+
+        const previousLogs = logs.filter(log => {
+            const logDate = log.date?.toDate?.() || new Date(log.date);
+            return logDate >= fourteenDaysAgo && logDate < sevenDaysAgo;
+        });
+
+        const recentCount = recentLogs.length;
+        const previousCount = previousLogs.length;
+        let trend = 'stable';
+        if (recentCount > previousCount * 1.1) trend = 'up';
+        else if (recentCount < previousCount * 0.9) trend = 'down';
+
+        return {
+            totalItems,
+            totalResidents,
+            lowStockItems,
+            outOfStockItems,
+            wellStockedItems,
+            topItems,
+            recentCount,
+            previousCount,
+            trend
+        };
+    }, [items, residents, logs]);
+
     const tabs = [
-        { id: 'residents', label: 'People', icon: '👥' },
-        { id: 'items', label: 'Items', icon: '📦' },
+        { id: 'stats', label: 'Dashboard', icon: '📊' },
         { id: 'tags', label: 'Tags', icon: '🏷️' },
         { id: 'icons', label: 'Icons', icon: '🎨' },
     ];
@@ -672,639 +482,136 @@ export default function AdminPanel({
                 ))}
             </div>
 
-            {/* Residents Tab */}
-            {activeTab === 'residents' && (
-                <div className="space-y-4 animate-fade-in">
-                    {/* Add Person Button */}
-                    <button
-                        onClick={openAddResidentModal}
-                        className="btn btn-primary w-full flex items-center justify-center gap-2"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Add Person
-                    </button>
-
-                    {/* Person List */}
-                    <div className="space-y-2">
-                        {residents.map((resident) => {
-                            const fullName = `${resident.firstName || ''} ${resident.lastName || ''}`.trim() || resident.name || 'Unknown';
-                            const initial = (resident.firstName || resident.name || 'U').charAt(0).toUpperCase();
-
-                            return (
-                                <div key={resident.id} className="card p-4">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                                                {initial}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <span className="font-semibold text-gray-900 dark:text-white block">{fullName}</span>
-                                                {resident.room && (
-                                                    <span className="text-sm text-gray-500 block">📍 {resident.room}</span>
-                                                )}
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {(resident.tags || []).map(tagId => renderTagBadge(tagId, true))}
-                                                </div>
-                                                {resident.phone && (
-                                                    <span className="text-xs text-gray-400 block mt-1">📞 {resident.phone}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                            <button
-                                                onClick={() => openEditResidentModal(resident)}
-                                                className="p-2 text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                                aria-label="Edit"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={() => onRemoveResident(resident.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                                aria-label="Delete"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        {residents.length === 0 && (
-                            <div className="text-center py-8 text-gray-500">
-                                No people added yet
+            {/* Stats/Dashboard Tab */}
+            {activeTab === 'stats' && (
+                <div className="space-y-6 animate-fade-in">
+                    {/* KPI Cards Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Total Items */}
+                        <div className="card p-6">
+                            <div className="text-3xl mb-2">📦</div>
+                            <div className="text-3xl font-black text-gray-900 dark:text-white">
+                                {stats.totalItems}
                             </div>
-                        )}
+                            <div className="text-sm text-gray-500">Total Items</div>
+                        </div>
+
+                        {/* Total Residents */}
+                        <div className="card p-6">
+                            <div className="text-3xl mb-2">👥</div>
+                            <div className="text-3xl font-black text-gray-900 dark:text-white">
+                                {stats.totalResidents}
+                            </div>
+                            <div className="text-sm text-gray-500">Residents</div>
+                        </div>
+
+                        {/* Low Stock Alerts */}
+                        <div className="card p-6 border-amber-200 dark:border-amber-800">
+                            <div className="text-3xl mb-2">⚠️</div>
+                            <div className="text-3xl font-black text-amber-600 dark:text-amber-400">
+                                {stats.lowStockItems.length}
+                            </div>
+                            <div className="text-sm text-gray-500">Low Stock</div>
+                        </div>
+
+                        {/* Out of Stock */}
+                        <div className="card p-6 border-red-200 dark:border-red-800">
+                            <div className="text-3xl mb-2">🚨</div>
+                            <div className="text-3xl font-black text-red-600 dark:text-red-400">
+                                {stats.outOfStockItems.length}
+                            </div>
+                            <div className="text-sm text-gray-500">Out of Stock</div>
+                        </div>
                     </div>
 
-                    {/* Add/Edit Person Modal */}
-                    {showResidentModal && createPortal(
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="card w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-slide-up shadow-2xl">
-                                {/* Fixed Header */}
-                                <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                        {editingResident ? 'Edit Person' : 'Add New Person'}
-                                    </h3>
-                                    <button
-                                        onClick={attemptCloseResidentModal}
-                                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+                    {/* Stock Distribution */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4">
+                            📊 Stock Distribution
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="text-center p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
+                                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                    {stats.wellStockedItems.length}
                                 </div>
-
-                                {/* Scrollable Body */}
-                                <div className="flex-1 overflow-y-auto p-6">
-                                    <div className="space-y-4">
-                                        {/* Status Badge (if edited entity has status) */}
-                                        {editingResident && residentForm.status && (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Status:</span>
-                                                {residentForm.status === 'active' && <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">✅ Active</span>}
-                                                {residentForm.status === 'moved_out' && <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">📦 Moved Out</span>}
-                                            </div>
-                                        )}
-
-                                        {/* Adaptive Name Fields */}
-                                        {residentForm.entityType === 'location' ? (
-                                            /* Location: Display Name */
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📍 Display Name *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={residentForm.displayName}
-                                                    onChange={(e) => updateResidentField('displayName', e.target.value)}
-                                                    className="input w-full"
-                                                    placeholder="Kitchen, Living Room, etc."
-                                                />
-                                            </div>
-                                        ) : (
-                                            /* Person: First Name + Last Name */
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        First Name *
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={residentForm.firstName}
-                                                        onChange={(e) => updateResidentField('firstName', e.target.value)}
-                                                        className="input w-full"
-                                                        placeholder="John"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Last Name
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={residentForm.lastName}
-                                                        onChange={(e) => updateResidentField('lastName', e.target.value)}
-                                                        className="input w-full"
-                                                        placeholder="Doe"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Contact Row - Only for people */}
-                                        {residentForm.entityType !== 'location' && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        📞 Phone
-                                                    </label>
-                                                    <input
-                                                        type="tel"
-                                                        value={residentForm.phone}
-                                                        onChange={(e) => updateResidentField('phone', e.target.value)}
-                                                        className="input w-full"
-                                                        placeholder="555-0123"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        📍 Room
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={residentForm.room}
-                                                        onChange={(e) => updateResidentField('room', e.target.value)}
-                                                        className="input w-full"
-                                                        placeholder="Room 101"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Room - For locations */}
-                                        {residentForm.entityType === 'location' && (
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    📍 Location ID / Room
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={residentForm.room}
-                                                    onChange={(e) => updateResidentField('room', e.target.value)}
-                                                    className="input w-full"
-                                                    placeholder="kitchen, livingroom, etc."
-                                                />
-                                            </div>
-                                        )}
-
-                                        {/* Country - Only for people */}
-                                        {residentForm.entityType !== 'location' && (
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                    🌍 Country of Origin
-                                                </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowCountryPicker(true)}
-                                                    className="input w-full text-left flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                >
-                                                    <span className="text-xl">{getCountryFlag(residentForm.country)}</span>
-                                                    <span className={residentForm.country ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
-                                                        {residentForm.country || 'Select country...'}
-                                                    </span>
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Dates Row - Only for people */}
-                                        {residentForm.entityType !== 'location' && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        📅 Move-in Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={residentForm.moveInDate}
-                                                        onChange={(e) => updateResidentField('moveInDate', e.target.value)}
-                                                        className="input w-full"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        📅 Move-out Date
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={residentForm.moveOutDate}
-                                                        onChange={(e) => updateResidentField('moveOutDate', e.target.value)}
-                                                        className="input w-full"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Tags */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                                🏷️ Tags
-                                            </label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {tags.map(tag => {
-                                                    const isSelected = (residentForm.tags || []).includes(tag.id);
-                                                    const styles = getTagStyles ? getTagStyles(tag.id) : { bg: 'bg-gray-100', text: 'text-gray-700' };
-                                                    return (
-                                                        <button
-                                                            key={tag.id}
-                                                            type="button"
-                                                            onClick={() => toggleFormTag(tag.id)}
-                                                            className={`inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-full transition-all ${isSelected
-                                                                ? `${styles.bg} ${styles.text} ring-2 ring-offset-1 ring-current`
-                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                                                                }`}
-                                                        >
-                                                            <span>{tag.icon}</span>
-                                                            <span>{tag.name}</span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Notes */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                📝 Notes
-                                            </label>
-                                            <textarea
-                                                value={residentForm.notes}
-                                                onChange={(e) => updateResidentField('notes', e.target.value)}
-                                                className="input w-full h-24 resize-none"
-                                                placeholder="Any additional notes about this person..."
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Fixed Footer */}
-                                <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={attemptCloseResidentModal}
-                                            className="btn btn-secondary flex-1"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleSaveResident}
-                                            className="btn btn-primary flex-1"
-                                            disabled={
-                                                residentForm.entityType === 'location'
-                                                    ? !residentForm.displayName.trim()
-                                                    : !residentForm.firstName.trim()
-                                            }
-                                        >
-                                            {editingResident ? 'Save Changes' : 'Add Person'}
-                                        </button>
-                                    </div>
-                                </div>
+                                <div className="text-sm text-emerald-700 dark:text-emerald-300">Well Stocked</div>
                             </div>
-
-                            {/* Country Picker Modal - nested within backdrop, will stay relative to it */}
-                            {showCountryPicker && (
-                                <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                                    <div className="card p-4 w-full max-w-md max-h-[70vh] flex flex-col animate-slide-up shadow-2xl">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                                Select Country
-                                            </h3>
-                                            <button
-                                                onClick={() => {
-                                                    setShowCountryPicker(false);
-                                                    setCountrySearch('');
-                                                }}
-                                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={countrySearch}
-                                            onChange={(e) => setCountrySearch(e.target.value)}
-                                            placeholder="Search countries..."
-                                            className="input mb-3"
-                                            autoFocus
-                                        />
-
-                                        <div className="flex-1 overflow-y-auto space-y-1">
-                                            {filteredCountries.map((country) => (
-                                                <button
-                                                    key={country.code}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        updateResidentField('country', country.name);
-                                                        setShowCountryPicker(false);
-                                                        setCountrySearch('');
-                                                    }}
-                                                    className={`w-full p-3 rounded-xl flex items-center gap-3 text-left transition-colors ${residentForm.country === country.name
-                                                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
-                                                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                                                        }`}
-                                                >
-                                                    <span className="text-2xl">{country.flag}</span>
-                                                    <span className="font-medium">{country.name}</span>
-                                                </button>
-                                            ))}
-                                            {filteredCountries.length === 0 && (
-                                                <p className="text-center text-gray-500 py-8">
-                                                    No countries match "{countrySearch}"
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                            <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                                <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                                    {stats.lowStockItems.length}
                                 </div>
-                            )}
-                        </div>,
-                        document.body
-                    )}
-                </div>
-            )}
-
-            {/* Items Tab */}
-            {activeTab === 'items' && (
-                <div className="space-y-4 animate-fade-in">
-                    <form onSubmit={handleAddItem} className="space-y-3">
-                        <div className="flex gap-2">
-                            {/* Icon button - opens picker */}
-                            <button
-                                type="button"
-                                onClick={() => setShowIconPicker(true)}
-                                className="input w-16 h-12 text-2xl text-center flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                title="Click to change icon"
-                            >
-                                {newItemIcon}
-                            </button>
-                            <input
-                                type="text"
-                                value={newItemName}
-                                onChange={(e) => setNewItemName(e.target.value)}
-                                placeholder="New item name..."
-                                className="input flex-1"
-                            />
-                            <button type="submit" className="btn btn-primary" disabled={!newItemName.trim()}>
-                                Add
-                            </button>
+                                <div className="text-sm text-amber-700 dark:text-amber-300">Low Stock</div>
+                            </div>
+                            <div className="text-center p-4 rounded-lg bg-red-50 dark:bg-red-900/20">
+                                <div className="text-2xl font-black text-red-600 dark:text-red-400">
+                                    {stats.outOfStockItems.length}
+                                </div>
+                                <div className="text-sm text-red-700 dark:text-red-300">Out of Stock</div>
+                            </div>
                         </div>
-                        {newItemName && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                💡 Icon auto-suggested based on name. Tap icon to change.
-                            </p>
-                        )}
-                    </form>
+                    </div>
 
-                    {/* Icon Picker Modal */}
-                    {showIconPicker && createPortal(
-                        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="card p-4 w-full max-w-md max-h-[70vh] flex flex-col animate-slide-up shadow-2xl">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                        Choose Icon
-                                    </h3>
-                                    <button
-                                        onClick={() => {
-                                            setShowIconPicker(false);
-                                            setIconSearch('');
-                                        }}
-                                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+                    {/* Activity Trend */}
+                    <div className="card p-6">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4">
+                            📈 Activity Trend (Last 7 Days)
+                        </h3>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-4xl font-black text-gray-900 dark:text-white">
+                                    {stats.recentCount}
                                 </div>
-
-                                <input
-                                    type="text"
-                                    value={iconSearch}
-                                    onChange={(e) => setIconSearch(e.target.value)}
-                                    placeholder="Search icons... (e.g. phone, soap, battery)"
-                                    className="input mb-4"
-                                    autoFocus
-                                />
-
-                                <div className="flex-1 overflow-y-auto">
-                                    <div className="grid grid-cols-6 gap-2">
-                                        {filteredIcons.map((icon) => (
-                                            <button
-                                                key={icon}
-                                                type="button"
-                                                onClick={() => {
-                                                    setNewItemIcon(icon);
-                                                    setShowIconPicker(false);
-                                                    setIconSearch('');
-                                                }}
-                                                className={`p-3 text-2xl rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${newItemIcon === icon ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
-                                                    }`}
-                                            >
-                                                {icon}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    {filteredIcons.length === 0 && (
-                                        <p className="text-center text-gray-500 py-8">
-                                            No icons match "{iconSearch}"
-                                        </p>
-                                    )}
-                                </div>
+                                <div className="text-sm text-gray-500 mt-1">Recent activities</div>
                             </div>
-                        </div>,
-                        document.body
-                    )}
-
-                    <div className="space-y-2">
-                        {items.map((item) => (
-                            <div key={item.id} className="card p-4">
-                                {editingItem === item.id ? (
-                                    /* Edit Mode */
-                                    <div className="space-y-3">
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowIconPicker(true)}
-                                                className="input w-14 h-12 text-2xl text-center flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700"
-                                            >
-                                                {editItemIcon}
-                                            </button>
-                                            <input
-                                                type="text"
-                                                value={editItemName}
-                                                onChange={(e) => setEditItemName(e.target.value)}
-                                                className="input flex-1"
-                                                placeholder="Item name"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => attemptCancelEditItem(item)}
-                                                className="btn btn-secondary flex-1"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() => handleSaveItem(item)}
-                                                className="btn btn-primary flex-1"
-                                            >
-                                                Save
-                                            </button>
-                                        </div>
+                            <div className="flex items-center gap-3">
+                                {stats.trend === 'up' && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-emerald-500 text-4xl">↑</span>
+                                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Increasing</span>
                                     </div>
-                                ) : (
-                                    /* Normal View */
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">{item.icon}</span>
-                                            <div>
-                                                <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
-                                                <p className="text-sm text-gray-500">Stock: {item.currentStock}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                onClick={() => setRestockItem(item)}
-                                                className="btn btn-success text-sm py-2 px-3"
-                                            >
-                                                Restock
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setEditingItem(item.id);
-                                                    setEditItemName(item.name);
-                                                    setEditItemIcon(item.icon);
-                                                    setInitialItemState({ name: item.name, icon: item.icon });
-                                                }}
-                                                className="p-2 text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                                aria-label="Edit"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={() => onUpdateItem(item.id, { hidden: !item.hidden })}
-                                                className={`p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ${item.hidden ? 'text-gray-400 hover:text-primary-500' : 'text-primary-500 hover:text-gray-400'}`}
-                                                aria-label={item.hidden ? "Unhide Item" : "Hide Item"}
-                                                title={item.hidden ? "Unhide Item" : "Hide Item"}
-                                            >
-                                                {item.hidden ? (
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                    </svg>
-                                                ) : (
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                    </svg>
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={() => onRemoveItem(item.id)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                                aria-label="Delete"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                )}
+                                {stats.trend === 'down' && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-red-500 text-4xl">↓</span>
+                                        <span className="text-sm font-bold text-red-600 dark:text-red-400">Decreasing</span>
+                                    </div>
+                                )}
+                                {stats.trend === 'stable' && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-500 text-4xl">→</span>
+                                        <span className="text-sm font-bold text-gray-600 dark:text-gray-400">Stable</span>
                                     </div>
                                 )}
                             </div>
-                        ))}
-                        {items.length === 0 && (
-                            <div className="text-center py-8 text-gray-500">
-                                No items added yet
-                            </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* Restock Modal */}
-                    {restockItem && createPortal(
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="card p-6 w-full max-w-sm animate-slide-up shadow-2xl">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
-                                    Restock {restockItem.name}
-                                </h3>
-
-                                <div className="mb-6 mt-4">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 text-center">Who is restocking?</p>
-                                    <ResidentSelector
-                                        residents={residents}
-                                        selectedResident={restockResident}
-                                        onSelect={setRestockResident}
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-center gap-4 mb-6">
-                                    <button
-                                        onClick={() => setRestockQuantity(Math.max(1, restockQuantity - 1))}
-                                        className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl font-bold"
-                                    >
-                                        −
-                                    </button>
-                                    <span className="text-3xl font-bold w-16 text-center">{restockQuantity}</span>
-                                    <button
-                                        onClick={() => setRestockQuantity(restockQuantity + 1)}
-                                        className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl font-bold"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                {/* Date Selection */}
-                                <div className="mb-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Restock Date</span>
-                                    <input
-                                        type="date"
-                                        value={restockDate}
-                                        onChange={(e) => setRestockDate(e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                        className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-1.5 rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-primary-500 transition-all outline-none"
-                                    />
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => {
-                                            setRestockItem(null);
-                                            setRestockDate(new Date().toISOString().split('T')[0]);
-                                        }}
-                                        className="btn btn-secondary flex-1"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleRestock}
-                                        className={`btn btn-success flex-1 ${!restockResident ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        disabled={!restockResident}
-                                    >
-                                        Confirm
-                                    </button>
-                                </div>
+                    {/* Top Consumed Items */}
+                    {stats.topItems.length > 0 && (
+                        <div className="card p-6">
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4">
+                                🔥 Top Consumed Items
+                            </h3>
+                            <div className="space-y-3">
+                                {stats.topItems.map((item, idx) => (
+                                    <div key={item.name} className="flex items-center gap-3">
+                                        <span className="text-2xl">
+                                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                                        </span>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-semibold text-gray-900 dark:text-white">
+                                                    {item.name}
+                                                </span>
+                                                <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                                                    {item.count} used
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        </div>,
-                        document.body
+                        </div>
                     )}
                 </div>
             )}

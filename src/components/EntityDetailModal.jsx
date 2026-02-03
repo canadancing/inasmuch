@@ -1,9 +1,83 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import RoleBadge from './RoleBadge';
 
-export default function EntityDetailModal({ isOpen, onClose, entity, logs = [] }) {
+export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], onUpdate, onDelete, tags = [], viewMode = 'analytics' }) {
+    // Early return MUST come before any hooks to avoid "rendered more hooks" error
     if (!isOpen || !entity) return null;
 
-    const { name, type, totalUses, activityLevel, lastActive, avatar, tags = [] } = entity;
+    const [isEditing, setIsEditing] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        room: '',
+        displayName: '',
+        tags: [],
+        notes: '',
+        primaryRole: ''
+    });
+
+    // Initialize form data when entering edit mode
+    const startEditing = () => {
+        const isLocation = entity.entityType === 'location';
+        setFormData({
+            firstName: entity.firstName || '',
+            lastName: entity.lastName || '',
+            phone: entity.phone || '',
+            room: entity.room || '',
+            displayName: entity.displayName || entity.name || '',
+            tags: entity.tags || [],
+            notes: entity.notes || '',
+            primaryRole: entity.primaryRole || ''
+        });
+        setIsEditing(true);
+    };
+
+    const handleChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleTagToggle = (tag) => {
+        setFormData(prev => ({
+            ...prev,
+            tags: prev.tags.includes(tag)
+                ? prev.tags.filter(t => t !== tag)
+                : [...prev.tags, tag]
+        }));
+    };
+
+    const handleSave = async () => {
+        const updates = {
+            ...formData,
+            tags: formData.tags
+        };
+        await onUpdate(entity.id, updates);
+        setIsEditing(false);
+        onClose(); // Close modal to show updated card
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setFormData({
+            firstName: '',
+            lastName: '',
+            phone: '',
+            room: '',
+            displayName: '',
+            tags: [],
+            notes: '',
+            primaryRole: ''
+        });
+    };
+
+    const handleDelete = async () => {
+        await onDelete(entity.id);
+        setShowDeleteConfirm(false);
+        onClose();
+    };
+
+    const { name, type, totalUses, activityLevel, lastActive, avatar } = entity;
 
     // Calculate statistics from logs
     const stats = useMemo(() => {
@@ -115,132 +189,314 @@ export default function EntityDetailModal({ isOpen, onClose, entity, logs = [] }
                                 <p className={`text-sm font-semibold text-${config.color}-600 dark:text-${config.color}-400`}>
                                     {config.label}
                                 </p>
-                                {tags.length > 0 && (
+                                {entity.tags && entity.tags.length > 0 && (
                                     <div className="flex gap-1 mt-1">
-                                        {tags.map(tag => (
-                                            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                                {tag}
+                                        {entity.tags.map(tag => (
+                                            <span key={typeof tag === 'string' ? tag : tag.id} className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                                {typeof tag === 'string' ? tag : tag.name}
                                             </span>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {!isEditing && onUpdate && (
+                                <button
+                                    onClick={startEditing}
+                                    className="px-4 py-2 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit
+                                </button>
+                            )}
+                            {!isEditing && onDelete && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete
+                                </button>
+                            )}
+                            <button
+                                onClick={onClose}
+                                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Usage Statistics */}
-                    <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                            📊 Usage Statistics
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Total consumed:</span>
-                                <span className="font-bold text-gray-900 dark:text-white">{totalUses || 0} items</span>
-                            </div>
-                            {stats.topItems.length > 0 && (
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">Most used:</span>
-                                    <span className="font-bold text-gray-900 dark:text-white">
-                                        {stats.topItems[0].name} ({stats.topItems[0].percentage}%)
-                                    </span>
+                    {isEditing ? (
+                        /* Edit Mode */
+                        <div className="space-y-4">
+                            {entity.entityType === 'person' ? (
+                                /* Person Form */
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                First Name *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.firstName}
+                                                onChange={(e) => handleChange('firstName', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                Last Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.lastName}
+                                                onChange={(e) => handleChange('lastName', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                📞 Phone
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={(e) => handleChange('phone', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                📍 Room *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.room}
+                                                onChange={(e) => handleChange('room', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                /* Location Form */
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Location Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.displayName}
+                                        onChange={(e) => handleChange('displayName', e.target.value)}
+                                        className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    />
                                 </div>
                             )}
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Usage trend:</span>
-                                <span className="font-bold text-gray-900 dark:text-white">
-                                    {stats.trend === 'increasing' && '↑ Increasing'}
-                                    {stats.trend === 'decreasing' && '↓ Decreasing'}
-                                    {stats.trend === 'stable' && '→ Stable'}
-                                </span>
+
+                            {/* Tags */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    🏷️ Tags
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {tags.map(tag => (
+                                        <button
+                                            key={tag.name}
+                                            onClick={() => handleTagToggle(tag.name)}
+                                            className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${formData.tags.includes(tag.name)
+                                                ? 'bg-primary-500 text-white'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                }`}
+                                            style={formData.tags.includes(tag.name) ? {
+                                                backgroundColor: tag.color,
+                                                color: 'white'
+                                            } : {}}
+                                        >
+                                            {tag.emoji} {tag.name}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Last active:</span>
-                                <span className="font-bold text-gray-900 dark:text-white">{formatLastActive(lastActive)}</span>
+
+                            {/* Notes */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    📝 Notes
+                                </label>
+                                <textarea
+                                    value={formData.notes}
+                                    onChange={(e) => handleChange('notes', e.target.value)}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                    rows={3}
+                                />
+                            </div>
+
+                            {/* Save/Cancel Buttons */}
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="flex-1 px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="flex-1 px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 transition-colors"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        /* View Mode */
+                        <>
+                            {/* Usage Statistics */}
+                            <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                    📊 Usage Statistics
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">Total consumed:</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{totalUses || 0} items</span>
+                                    </div>
+                                    {stats.topItems.length > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">Most used:</span>
+                                            <span className="font-bold text-gray-900 dark:text-white">
+                                                {stats.topItems[0].name} ({stats.topItems[0].percentage}%)
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">Usage trend:</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">
+                                            {stats.trend === 'increasing' && '↑ Increasing'}
+                                            {stats.trend === 'decreasing' && '↓ Decreasing'}
+                                            {stats.trend === 'stable' && '→ Stable'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">Last active:</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{formatLastActive(lastActive)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Top Items */}
+                            {stats.topItems.length > 0 && (
+                                <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                    <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                        🏆 Top 5 Items
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {stats.topItems.map((item, index) => (
+                                            <div key={item.name} className="flex items-center gap-3">
+                                                <span className="text-2xl">
+                                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                                                </span>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="font-semibold text-gray-900 dark:text-white">{item.name}</span>
+                                                        <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
+                                                            {item.count} ({item.percentage}%)
+                                                        </span>
+                                                    </div>
+                                                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-primary-500 rounded-full transition-all"
+                                                            style={{ width: `${item.percentage}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Recent Activity */}
+                            {stats.recentActivity.length > 0 && (
+                                <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                    <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                        📅 Recent Activity
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {stats.recentActivity.map((log) => (
+                                            <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${log.action === 'used'
+                                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        }`}>
+                                                        {log.action}
+                                                    </span>
+                                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        {log.quantity}× {log.itemName || 'Unknown'}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {formatDate(log.date)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Empty State */}
+                            {stats.recentActivity.length === 0 && (
+                                <div className="text-center py-8">
+                                    <div className="text-5xl mb-3 opacity-30">📭</div>
+                                    <p className="text-gray-500 dark:text-gray-400">No activity yet</p>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                                Confirm Delete
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                Are you sure you want to delete <strong>{entity.name}</strong>? This action will mark them as deleted but preserve their history.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+                                >
+                                    Delete
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    {/* Top Items */}
-                    {stats.topItems.length > 0 && (
-                        <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                🏆 Top 5 Items
-                            </h3>
-                            <div className="space-y-3">
-                                {stats.topItems.map((item, index) => (
-                                    <div key={item.name} className="flex items-center gap-3">
-                                        <span className="text-2xl">
-                                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
-                                        </span>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-semibold text-gray-900 dark:text-white">{item.name}</span>
-                                                <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
-                                                    {item.count} ({item.percentage}%)
-                                                </span>
-                                            </div>
-                                            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-primary-500 rounded-full transition-all"
-                                                    style={{ width: `${item.percentage}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Recent Activity */}
-                    {stats.recentActivity.length > 0 && (
-                        <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                📅 Recent Activity
-                            </h3>
-                            <div className="space-y-2">
-                                {stats.recentActivity.map((log) => (
-                                    <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${log.action === 'used'
-                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                }`}>
-                                                {log.action}
-                                            </span>
-                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                {log.quantity}× {log.itemName || 'Unknown'}
-                                            </span>
-                                        </div>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                            {formatDate(log.date)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Empty State */}
-                    {stats.recentActivity.length === 0 && (
-                        <div className="text-center py-8">
-                            <div className="text-5xl mb-3 opacity-30">📭</div>
-                            <p className="text-gray-500 dark:text-gray-400">No activity yet</p>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* Footer */}
                 <div className="p-6 border-t border-gray-200 dark:border-gray-700">
