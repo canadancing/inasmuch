@@ -45,3 +45,6 @@ Desktop.ini
 .tmp/
 *.bak
 *.tmp
+
+# Migration scripts (may contain sensitive credentials)
+migrate-*.js
