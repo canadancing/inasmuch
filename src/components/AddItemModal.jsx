@@ -1,21 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { ITEM_ICON_CATEGORIES, DEFAULT_ICON, suggestIcons } from '../constants/itemIcons';
 
 export default function AddItemModal({ isOpen, onClose, onAddItem }) {
     const [itemName, setItemName] = useState('');
-    const [itemIcon, setItemIcon] = useState('📦');
+    const [itemIcon, setItemIcon] = useState(DEFAULT_ICON);
+    const [activeCategory, setActiveCategory] = useState('bathroom');
 
-    const commonEmojis = [
-        '🧻', '🧼', '🧽', '🧴', '🧺', '🔌', '💡', '🔋', '🛁', '🚿',
-        '🧹', '🧯', '📦', '🎁', '🍽️', '🥄', '🔪', '🥤', '🍺', '☕',
-        '🧃', '🧂', '🧈', '🥛', '🍞', '🧇', '🥐', '🧀', '🥚', '🍳'
-    ];
+    // Get smart suggestions based on item name
+    const suggestions = useMemo(() => {
+        return suggestIcons(itemName);
+    }, [itemName]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (itemName.trim()) {
             onAddItem(itemName.trim(), itemIcon);
             setItemName('');
-            setItemIcon('📦');
+            setItemIcon(DEFAULT_ICON);
+            setActiveCategory('bathroom');
             onClose();
         }
     };
@@ -70,16 +72,62 @@ export default function AddItemModal({ isOpen, onClose, onAddItem }) {
                         <div className="flex items-center gap-3 mb-3">
                             <div className="text-6xl">{itemIcon}</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                Click an emoji below to change
+                                Click an emoji to change
                             </div>
                         </div>
-                        <div className="grid grid-cols-10 gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl max-h-48 overflow-y-auto">
-                            {commonEmojis.map((emoji) => (
+
+                        {/* Smart Suggestions */}
+                        {suggestions.length > 0 && (
+                            <div className="mb-3">
+                                <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wide">
+                                    💡 Suggested for "{itemName}"
+                                </div>
+                                <div className="flex gap-2 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                                    {suggestions.map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => setItemIcon(emoji)}
+                                            className={`text-3xl p-2 rounded-lg hover:bg-white dark:hover:bg-primary-800 transition-all ${itemIcon === emoji
+                                                    ? 'bg-white dark:bg-primary-800 ring-2 ring-primary-500 scale-110'
+                                                    : ''
+                                                }`}
+                                            title="Suggested icon"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Category Tabs */}
+                        <div className="flex gap-1 mb-3 overflow-x-auto pb-2">
+                            {Object.entries(ITEM_ICON_CATEGORIES).map(([key, category]) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setActiveCategory(key)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === key
+                                            ? 'bg-primary-500 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        }`}
+                                >
+                                    {category.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Icon Grid */}
+                        <div className="grid grid-cols-8 gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl max-h-48 overflow-y-auto">
+                            {ITEM_ICON_CATEGORIES[activeCategory].icons.map(({ emoji }) => (
                                 <button
                                     key={emoji}
                                     type="button"
                                     onClick={() => setItemIcon(emoji)}
-                                    className={`text-2xl p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors ${itemIcon === emoji ? 'bg-primary-100 dark:bg-primary-900/30 ring-2 ring-primary-500' : ''
+                                    className={`text-2xl p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors ${itemIcon === emoji
+                                            ? 'bg-white dark:bg-gray-700 ring-2 ring-primary-500'
+                                            : ''
                                         }`}
                                 >
                                     {emoji}

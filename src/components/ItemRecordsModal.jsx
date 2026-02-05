@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { ITEM_ICON_CATEGORIES, DEFAULT_ICON, suggestIcons } from '../constants/itemIcons';
 
 export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId, onUpdateItem, onDeleteItem, onUpdateLog, onDeleteLog, tags = [], residents = [] }) {
     const [records, setRecords] = useState([]);
@@ -11,6 +12,8 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
     const [editingLogId, setEditingLogId] = useState(null);
     const [editingLogData, setEditingLogData] = useState(null);
     const [deleteLogId, setDeleteLogId] = useState(null);
+    const [activeIconCategory, setActiveIconCategory] = useState('bathroom');
+    const [showIconPicker, setShowIconPicker] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         icon: '',
@@ -137,6 +140,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
     const handleCancelEdit = () => {
         setIsEditing(false);
         setActiveTab('usage');
+        setShowIconPicker(false);
         setFormData({
             name: '',
             icon: '',
@@ -148,6 +152,14 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             tags: [],
             notes: ''
         });
+    };
+
+    // Enhanced close handler that resets edit mode
+    const handleClose = () => {
+        if (isEditing) {
+            handleCancelEdit();
+        }
+        onClose();
     };
 
     const handleDelete = async () => {
@@ -270,12 +282,17 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
         };
     }, [records, item]);
 
+    // Smart icon suggestions based on item name
+    const iconSuggestions = useMemo(() => {
+        return suggestIcons(formData.name);
+    }, [formData.name]);
+
     const stats = activeTab === 'statistics' ? calculateStatistics() : null;
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={handleClose}>
             <div
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
@@ -320,7 +337,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                 </button>
                             )}
                             <button
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                             >
                                 <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -377,7 +394,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                         <div className="space-y-6">
                             {/* Item Name & Icon */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
+                                <div className="col-span-2">
                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                         Item Name *
                                     </label>
@@ -388,20 +405,96 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                         className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                                     />
                                 </div>
-                                <div>
+                                <div className="col-span-2">
                                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                         Icon
                                     </label>
-                                    <div className="flex items-center gap-2">
-                                        <div className="text-4xl">{formData.icon}</div>
-                                        <input
-                                            type="text"
-                                            value={formData.icon}
-                                            onChange={(e) => handleChange('icon', e.target.value)}
-                                            className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
-                                            placeholder="📦"
-                                        />
+
+                                    {/* Current Icon Display */}
+                                    <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                                        <div className="text-5xl">{formData.icon || DEFAULT_ICON}</div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">Current Icon</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">Click an emoji below to change</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowIconPicker(!showIconPicker)}
+                                            className="px-4 py-2 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors text-sm"
+                                        >
+                                            {showIconPicker ? 'Hide Picker' : 'Change Icon'}
+                                        </button>
                                     </div>
+
+                                    {/* Icon Picker */}
+                                    {showIconPicker && (
+                                        <div className="space-y-3">
+                                            {/* Smart Suggestions */}
+                                            {iconSuggestions.length > 0 && (
+                                                <div>
+                                                    <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wide">
+                                                        💡 Suggested for "{formData.name}"
+                                                    </div>
+                                                    <div className="flex gap-2 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                                                        {iconSuggestions.map((emoji) => (
+                                                            <button
+                                                                key={emoji}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    handleChange('icon', emoji);
+                                                                    setShowIconPicker(false);
+                                                                }}
+                                                                className={`text-3xl p-2 rounded-lg hover:bg-white dark:hover:bg-primary-800 transition-all ${formData.icon === emoji
+                                                                    ? 'bg-white dark:bg-primary-800 ring-2 ring-primary-500 scale-110'
+                                                                    : ''
+                                                                    }`}
+                                                                title="Suggested icon"
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Category Tabs */}
+                                            <div className="flex gap-1 overflow-x-auto pb-2">
+                                                {Object.entries(ITEM_ICON_CATEGORIES).map(([key, category]) => (
+                                                    <button
+                                                        key={key}
+                                                        type="button"
+                                                        onClick={() => setActiveIconCategory(key)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeIconCategory === key
+                                                            ? 'bg-primary-500 text-white'
+                                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                    >
+                                                        {category.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Icon Grid */}
+                                            <div className="grid grid-cols-10 gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl max-h-48 overflow-y-auto">
+                                                {ITEM_ICON_CATEGORIES[activeIconCategory].icons.map(({ emoji }) => (
+                                                    <button
+                                                        key={emoji}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleChange('icon', emoji);
+                                                            setShowIconPicker(false);
+                                                        }}
+                                                        className={`text-2xl p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors ${formData.icon === emoji
+                                                            ? 'bg-white dark:bg-gray-700 ring-2 ring-primary-500'
+                                                            : ''
+                                                            }`}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
