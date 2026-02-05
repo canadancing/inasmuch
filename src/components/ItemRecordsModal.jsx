@@ -14,6 +14,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
     const [deleteLogId, setDeleteLogId] = useState(null);
     const [activeIconCategory, setActiveIconCategory] = useState('bathroom');
     const [showIconPicker, setShowIconPicker] = useState(false);
+    const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         icon: '',
@@ -157,8 +158,33 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
     // Enhanced close handler that resets edit mode
     const handleClose = () => {
         if (isEditing) {
+            // Check if there are unsaved changes
+            const hasChanges =
+                formData.name !== (item.name || '') ||
+                formData.icon !== (item.icon || '📦') ||
+                formData.location !== (item.location || '') ||
+                formData.currentStock !== (item.currentStock || 0) ||
+                formData.minStock !== (item.minStock || 0) ||
+                formData.maxStock !== (item.maxStock || 0) ||
+                formData.unit !== (item.unit || 'units') ||
+                JSON.stringify(formData.tags) !== JSON.stringify(item.tags || []) ||
+                formData.notes !== (item.notes || '');
+
+            if (hasChanges) {
+                // Show confirmation dialog
+                setShowUnsavedWarning(true);
+                return; // Don't close yet
+            }
+            // No changes, just cancel edit mode
             handleCancelEdit();
         }
+        onClose();
+    };
+
+    // Proceed with closing after confirming unsaved changes
+    const handleConfirmClose = () => {
+        setShowUnsavedWarning(false);
+        handleCancelEdit();
         onClose();
     };
 
@@ -1065,6 +1091,34 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                     className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
                                 >
                                     Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Unsaved Changes Warning Modal */}
+                {showUnsavedWarning && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                                Unsaved Changes
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                You have unsaved changes. Are you sure you want to discard them?
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowUnsavedWarning(false)}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    Keep Editing
+                                </button>
+                                <button
+                                    onClick={handleConfirmClose}
+                                    className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+                                >
+                                    Discard Changes
                                 </button>
                             </div>
                         </div>
