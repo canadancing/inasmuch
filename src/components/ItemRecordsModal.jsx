@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId, onUpdateItem, onDeleteItem, onUpdateLog, onDeleteLog, tags = [] }) {
+export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId, onUpdateItem, onDeleteItem, onUpdateLog, onDeleteLog, tags = [], residents = [] }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('usage'); // 'usage', 'statistics', 'details'
@@ -162,7 +162,11 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
         setEditingLogId(record.id);
         setEditingLogData({
             quantity: record.quantity || 0,
-            note: record.note || ''
+            note: record.note || '',
+            residentId: record.residentId,
+            residentName: record.residentName,
+            date: record.date || record.timestamp || new Date(),
+            action: record.action
         });
     };
 
@@ -802,10 +806,103 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                 {/* Log Edit Modal */}
                 {editingLogId && editingLogData && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 max-w-md mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
                             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4">
                                 Edit Log Entry
                             </h3>
+
+                            {/* Person selector */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Person *
+                                </label>
+                                <select
+                                    value={editingLogData.residentId || ''}
+                                    onChange={(e) => {
+                                        const resident = residents.find(r => r.id === e.target.value);
+                                        setEditingLogData({
+                                            ...editingLogData,
+                                            residentId: e.target.value,
+                                            residentName: resident ? `${resident.firstName || ''} ${resident.lastName || ''}`.trim() : ''
+                                        });
+                                    }}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                >
+                                    <option value="">Select a person</option>
+                                    {/* Show the currently logged person if they're not in the residents list */}
+                                    {editingLogData.residentId && !residents.find(r => r.id === editingLogData.residentId) && (
+                                        <option value={editingLogData.residentId}>
+                                            {editingLogData.residentName || 'Current User'}
+                                        </option>
+                                    )}
+                                    {residents.map(resident => (
+                                        <option key={resident.id} value={resident.id}>
+                                            {`${resident.firstName || ''} ${resident.lastName || ''}`.trim()}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Action type selector */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Action Type *
+                                </label>
+                                <div className="flex gap-3">
+                                    <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all ${editingLogData.action === 'used' || editingLogData.action === 'consume'
+                                        ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}>
+                                        <input
+                                            type="radio"
+                                            name="action"
+                                            value="used"
+                                            checked={editingLogData.action === 'used' || editingLogData.action === 'consume'}
+                                            onChange={(e) => setEditingLogData({ ...editingLogData, action: 'used' })}
+                                            className="sr-only"
+                                        />
+                                        <span className="text-2xl">📉</span>
+                                        <span className={`font-semibold ${editingLogData.action === 'used' || editingLogData.action === 'consume'
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : 'text-gray-600 dark:text-gray-400'
+                                            }`}>Used</span>
+                                    </label>
+                                    <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all ${editingLogData.action === 'restocked' || editingLogData.action === 'restock'
+                                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}>
+                                        <input
+                                            type="radio"
+                                            name="action"
+                                            value="restocked"
+                                            checked={editingLogData.action === 'restocked' || editingLogData.action === 'restock'}
+                                            onChange={(e) => setEditingLogData({ ...editingLogData, action: 'restocked' })}
+                                            className="sr-only"
+                                        />
+                                        <span className="text-2xl">📈</span>
+                                        <span className={`font-semibold ${editingLogData.action === 'restocked' || editingLogData.action === 'restock'
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : 'text-gray-600 dark:text-gray-400'
+                                            }`}>Restocked</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Date picker */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Date *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={editingLogData.date instanceof Date
+                                        ? editingLogData.date.toISOString().split('T')[0]
+                                        : editingLogData.date?.toDate?.().toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+                                    }
+                                    onChange={(e) => setEditingLogData({ ...editingLogData, date: new Date(e.target.value) })}
+                                    className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                />
+                            </div>
 
                             {/* Quantity input */}
                             <div className="mb-4">

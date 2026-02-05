@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import AddPersonModal from './AddPersonModal';
 
-export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView }) {
+export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView, onAddResident, tags = [] }) {
     const [selectedResident, setSelectedResident] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -12,6 +13,9 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
     const [itemSearch, setItemSearch] = useState('');
     const [showResidentDropdown, setShowResidentDropdown] = useState(false);
     const [showItemDropdown, setShowItemDropdown] = useState(false);
+
+    // AddPersonModal state
+    const [showAddPersonModal, setShowAddPersonModal] = useState(false);
 
     // Refs for click-outside detection
     const residentDropdownRef = useRef(null);
@@ -153,9 +157,20 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                 <div className="p-6 space-y-6">
                     {/* Resident Selection with Search */}
                     <div className="relative" ref={residentDropdownRef}>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                            Person
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                Person
+                            </label>
+                            <button
+                                onClick={() => setShowAddPersonModal(true)}
+                                className="px-3 py-1.5 text-xs font-bold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-1"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Person
+                            </button>
+                        </div>
                         <div className="relative">
                             <input
                                 type="text"
@@ -198,10 +213,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                                                 No people found
                                             </p>
                                             <button
-                                                onClick={() => {
-                                                    onClose();
-                                                    setCurrentView?.('admin');
-                                                }}
+                                                onClick={() => setShowAddPersonModal(true)}
                                                 className="px-4 py-2 text-sm font-semibold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
                                             >
                                                 ➕ Add People
@@ -406,6 +418,25 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                     </button>
                 </div>
             </div>
+
+            {/* Add Person or Location Modal */}
+            <AddPersonModal
+                isOpen={showAddPersonModal}
+                onClose={() => setShowAddPersonModal(false)}
+                onAdd={async (personData) => {
+                    // Call the parent's onAddResident to create the person
+                    const newPerson = await onAddResident(personData);
+
+                    // Auto-select the newly created person
+                    if (newPerson) {
+                        setSelectedResident(newPerson);
+                    }
+
+                    // Close the modal
+                    setShowAddPersonModal(false);
+                }}
+                tags={tags}
+            />
         </div>
     );
 }

@@ -489,6 +489,7 @@ export default function ResidentView({
                 onUpdateLog={onUpdateLog}
                 onDeleteLog={onDeleteLog}
                 tags={[]}
+                residents={residents}
             />
 
             {/* Add Item Modal */}

@@ -1,7 +1,8 @@
 // Modal for restocking items quickly
 import { useState, useEffect, useRef } from 'react';
+import AddPersonModal from './AddPersonModal';
 
-export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView, residents }) {
+export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView, residents, onAddResident, tags = [] }) {
     const [selectedPerson, setSelectedPerson] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
@@ -11,6 +12,9 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
     const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasAutoSelected, setHasAutoSelected] = useState(false);
+
+    // AddPersonModal state
+    const [showAddPersonModal, setShowAddPersonModal] = useState(false);
 
     // Refs for click-outside detection
     const itemDropdownRef = useRef(null);
@@ -166,9 +170,20 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                 <div className="p-6 space-y-6">
                     {/* Person Selection with Search */}
                     <div className="relative" ref={personDropdownRef}>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                            WHO IS RESTOCKING?
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                WHO IS RESTOCKING?
+                            </label>
+                            <button
+                                onClick={() => setShowAddPersonModal(true)}
+                                className="px-3 py-1.5 text-xs font-bold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-1"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Person
+                            </button>
+                        </div>
                         <div className="relative">
                             <input
                                 type="text"
@@ -214,10 +229,7 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                                                 No people found
                                             </p>
                                             <button
-                                                onClick={() => {
-                                                    onClose();
-                                                    setCurrentView?.('admin');
-                                                }}
+                                                onClick={() => setShowAddPersonModal(true)}
                                                 className="px-4 py-2 text-sm font-semibold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
                                             >
                                                 ➕ Add People
@@ -407,6 +419,25 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                     </button>
                 </div>
             </div>
+
+            {/* Add Person or Location Modal */}
+            <AddPersonModal
+                isOpen={showAddPersonModal}
+                onClose={() => setShowAddPersonModal(false)}
+                onAdd={async (personData) => {
+                    // Call the parent's onAddResident to create the person
+                    const newPerson = await onAddResident(personData);
+
+                    // Auto-select the newly created person
+                    if (newPerson) {
+                        setSelectedPerson(newPerson);
+                    }
+
+                    // Close the modal
+                    setShowAddPersonModal(false);
+                }}
+                tags={tags}
+            />
         </div>
     );
 }

@@ -10,6 +10,7 @@ import {
     doc,
     getDoc,
     serverTimestamp,
+    writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useInventory } from '../context/InventoryContext';
@@ -394,54 +395,125 @@ export function useFirestore(user) {
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
         const logEntry = logs.find(l => l.id === logId);
 
-        if (!logEntry) return;
+        if (!logEntry || !logEntry.itemId) return;
 
-        // Calculate stock adjustment if quantity changed
-        const oldQty = logEntry.quantity || 0;
-        const newQty = updates.quantity !== undefined ? updates.quantity : oldQty;
-        const qtyDiff = newQty - oldQty;
+        // TIMELINE RECALCULATION APPROACH
+        // 1. Get all logs for this item, sorted by date
+        const itemLogs = logs
+            .filter(l => l.itemId === logEntry.itemId)
+            .sort((a, b) => {
+                const dateA = a.date || a.timestamp || new Date(0);
+                const dateB = b.date || b.timestamp || new Date(0);
+                return dateA - dateB;
+            });
 
-        // Update the log entry
-        await updateDoc(logRef, {
+        // 2. Find the index of the edited log
+        const editedIndex = itemLogs.findIndex(l => l.id === logId);
+        if (editedIndex === -1) return;
+
+        // 3. Replay timeline UP TO the edited log to get "before" stock
+        let stockBeforeEdit = 0;
+        for (let i = 0; i < editedIndex; i++) {
+            const log = itemLogs[i];
+            if (log.action === 'used' || log.action === 'consume') {
+                stockBeforeEdit = Math.max(0, stockBeforeEdit - (log.quantity || 0));
+            } else if (log.action === 'restocked' || log.action === 'restock') {
+                stockBeforeEdit += (log.quantity || 0);
+            }
+        }
+
+        // 4. Apply the EDITED log with NEW values
+        const newQty = updates.quantity !== undefined ? updates.quantity : logEntry.quantity;
+        const newAction = updates.action !== undefined ? updates.action : logEntry.action;
+
+        let stockAfterEdit = stockBeforeEdit;
+        if (newAction === 'used' || newAction === 'consume') {
+            stockAfterEdit = Math.max(0, stockAfterEdit - newQty);
+        } else if (newAction === 'restocked' || newAction === 'restock') {
+            stockAfterEdit += newQty;
+        }
+
+        // 5. Recalculate all SUBSEQUENT logs
+        const logsToUpdate = [];
+        let runningStock = stockAfterEdit;
+
+        for (let i = editedIndex + 1; i < itemLogs.length; i++) {
+            const log = itemLogs[i];
+            if (log.action === 'used' || log.action === 'consume') {
+                runningStock = Math.max(0, runningStock - (log.quantity || 0));
+            } else if (log.action === 'restocked' || log.action === 'restock') {
+                runningStock += (log.quantity || 0);
+            }
+
+            logsToUpdate.push({
+                id: log.id,
+                newStock: runningStock
+            });
+        }
+
+        // Handle date field conversion if provided (preprocessing)
+        if (updates.date) {
+            // If it's already a valid Date object, use it
+            if (updates.date instanceof Date && !isNaN(updates.date.getTime())) {
+                updates.date = updates.date;
+            }
+            // If it's a Firestore timestamp with toDate(), convert it
+            else if (updates.date?.toDate && typeof updates.date.toDate === 'function') {
+                updates.date = updates.date.toDate();
+            }
+            // If it's a string, parse it carefully
+            else if (typeof updates.date === 'string') {
+                const parsedDate = new Date(updates.date);
+                if (!isNaN(parsedDate.getTime())) {
+                    updates.date = parsedDate;
+                } else {
+                    // If string parsing failed, remove it
+                    console.warn('Could not parse date string:', updates.date);
+                    delete updates.date;
+                }
+            }
+        }
+
+        // 6. Batch update all affected logs + item stock
+        const batch = writeBatch(db);
+
+        // Update the edited log
+        batch.update(logRef, {
             ...updates,
+            newStock: stockAfterEdit,
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
 
-        // Update item stock if quantity changed
-        if (qtyDiff !== 0 && logEntry.itemId) {
-            const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
-            const itemSnapshot = await getDoc(itemRef);
-
-            if (itemSnapshot.exists()) {
-                const currentStock = itemSnapshot.data().currentStock || 0;
-                let newStock = currentStock;
-
-                // Adjust stock based on action type
-                if (logEntry.action === 'used' || logEntry.action === 'consume') {
-                    // Used/consume reduces stock, so if qty increased, reduce more
-                    newStock = currentStock - qtyDiff;
-                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock') {
-                    // Restock increases stock, so if qty increased, add more
-                    newStock = currentStock + qtyDiff;
-                }
-
-                await updateDoc(itemRef, {
-                    currentStock: Math.max(0, newStock),
-                    updatedAt: serverTimestamp(),
-                    updatedBy: user?.uid
-                });
-            }
+        // Update all subsequent logs
+        for (const logUpdate of logsToUpdate) {
+            batch.update(
+                doc(db, 'inventories', currentInventoryId, 'logs', logUpdate.id),
+                { newStock: logUpdate.newStock }
+            );
         }
+
+        // Update item's current stock
+        const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
+        batch.update(itemRef, {
+            currentStock: runningStock,
+            updatedAt: serverTimestamp(),
+            updatedBy: user?.uid
+        });
+
+        await batch.commit();
+
 
         // Audit the fact that a history entry was modified
         await addAuditEntry('usage-log-edited', {
             logId,
             itemName: logEntry?.itemName || 'Unknown',
-            residentName: logEntry?.residentName || 'Unknown',
-            originalQuantity: oldQty,
+            residentName: updates.residentName || logEntry?.residentName || 'Unknown',
+            originalQuantity: logEntry.quantity,
             newQuantity: newQty,
-            stockAdjustment: qtyDiff,
+            originalAction: logEntry.action,
+            newAction: newAction,
+            affectedLogsCount: logsToUpdate.length + 1,
             fieldsModified: Object.keys(updates)
         });
     };

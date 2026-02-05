@@ -1,7 +1,8 @@
 // Modal for logging consumption/usage quickly
 import { useState, useEffect, useRef } from 'react';
+import AddPersonModal from './AddPersonModal';
 
-export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident }) {
+export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident, tags = [] }) {
     const [selectedPerson, setSelectedPerson] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
@@ -19,6 +20,9 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
     const [newPersonRoom, setNewPersonRoom] = useState('');
     const [isCreatingPerson, setIsCreatingPerson] = useState(false);
 
+    // AddPersonModal state
+    const [showAddPersonModal, setShowAddPersonModal] = useState(false);
+
     // Refs for click-outside detection
     const itemDropdownRef = useRef(null);
     const personDropdownRef = useRef(null);
@@ -28,7 +32,21 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
         item.name.toLowerCase().includes(itemSearch.toLowerCase())
     );
 
-    const filteredPersons = (residents || []).filter(person =>
+    // Create current user person object
+    const currentUserPerson = user ? {
+        id: user.uid,
+        firstName: (user.displayName || user.email || 'Current User').split(' ')[0] || user.email,
+        lastName: (user.displayName || user.email || '').split(' ').slice(1).join(' ') || '',
+        room: user.email || 'Current User',
+        isCurrentUser: true
+    } : null;
+
+    // Filter residents and add current user at the top
+    const allPersons = currentUserPerson
+        ? [currentUserPerson, ...(residents || [])]
+        : (residents || []);
+
+    const filteredPersons = allPersons.filter(person =>
         `${person.firstName} ${person.lastName} ${person.room}`.toLowerCase().includes(personSearch.toLowerCase())
     );
 
@@ -63,21 +81,23 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
         }
     }, [isOpen, initialItems]);
 
-    // Auto-select current user as person when modal opens
+    // Auto-select current user ONCE when modal opens
     useEffect(() => {
         if (isOpen && !hasAutoSelected && user) {
-            // Create a virtual person object from the current user
+            // Auto-select current user on first open
             const nameParts = (user.displayName || user.email || 'Current User').split(' ');
             const currentUserPerson = {
                 id: user.uid,
                 firstName: nameParts[0] || user.email,
                 lastName: nameParts.slice(1).join(' ') || '',
-                room: user.email || 'Current User'
+                room: user.email || 'Current User',
+                isCurrentUser: true
             };
             setSelectedPerson(currentUserPerson);
             setHasAutoSelected(true);
         } else if (!isOpen) {
-            // Reset auto-selection flag when modal closes
+            // Reset on close
+            setSelectedPerson(null);
             setHasAutoSelected(false);
         }
     }, [isOpen, user, hasAutoSelected]);
@@ -251,9 +271,20 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                 <div className="p-6 space-y-6">
                     {/* Person Selection with Search */}
                     <div className="relative" ref={personDropdownRef}>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                            WHO USED THE ITEM?
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                WHO USED THE ITEM?
+                            </label>
+                            <button
+                                onClick={() => setShowAddPersonModal(true)}
+                                className="px-3 py-1.5 text-xs font-bold bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-1"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Person
+                            </button>
+                        </div>
                         <div className="relative">
                             <input
                                 type="text"
@@ -302,11 +333,16 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                                                 setShowPersonDropdown(false);
                                                 setPersonSearch('');
                                             }}
-                                            className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                                            className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${person.isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-200 dark:border-blue-800' : ''}`}
                                         >
                                             <div>
-                                                <div className="font-semibold text-gray-900 dark:text-white">
+                                                <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                                     {person.firstName} {person.lastName}
+                                                    {person.isCurrentUser && (
+                                                        <span className="text-xs font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                                                            You
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="text-xs text-gray-500 dark:text-gray-400">
                                                     {person.room}
@@ -320,10 +356,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                                                 No people found
                                             </p>
                                             <button
-                                                onClick={() => {
-                                                    onClose();
-                                                    setCurrentView?.('admin');
-                                                }}
+                                                onClick={() => setShowAddPersonModal(true)}
                                                 className="px-4 py-2 text-sm font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                                             >
                                                 ➕ Add People
@@ -591,6 +624,25 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                     </button>
                 </div>
             </div>
+
+            {/* Add Person or Location Modal */}
+            <AddPersonModal
+                isOpen={showAddPersonModal}
+                onClose={() => setShowAddPersonModal(false)}
+                onAdd={async (personData) => {
+                    // Call the parent's onAddResident to create the person
+                    const newPerson = await onAddResident(personData);
+
+                    // Auto-select the newly created person
+                    if (newPerson) {
+                        setSelectedPerson(newPerson);
+                    }
+
+                    // Close the modal
+                    setShowAddPersonModal(false);
+                }}
+                tags={tags}
+            />
         </div>
     );
 }
