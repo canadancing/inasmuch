@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { useInventory } from '../context/InventoryContext';
 import InventoryNicknameModal from './InventoryNicknameModal';
 import CreateInventoryModal from './CreateInventoryModal';
+import DeleteInventoryModal from './DeleteInventoryModal';
 
 export default function InventorySwitcher() {
-    const { inventories, currentInventoryId, switchInventory, currentInventory, permissions, user, createInventory } = useInventory();
+    const { inventories, currentInventoryId, switchInventory, currentInventory, permissions, user, createInventory, deleteInventory: deleteInventoryFn } = useInventory();
     const [renameInventory, setRenameInventory] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [deleteInventory, setDeleteInventory] = useState(null);
 
     if (!inventories || inventories.length === 0) {
         return null;
@@ -144,6 +146,21 @@ export default function InventorySwitcher() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                         </svg>
                                                     </button>
+                                                    {inventories.length > 1 && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setDropdownOpen(false);
+                                                                setDeleteInventory(inventory);
+                                                            }}
+                                                            className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                                            title="Delete Inventory"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -251,6 +268,13 @@ export default function InventorySwitcher() {
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
                 onCreate={createInventory}
+            />
+
+            <DeleteInventoryModal
+                isOpen={!!deleteInventory}
+                onClose={() => setDeleteInventory(null)}
+                inventory={deleteInventory}
+                onDelete={deleteInventoryFn}
             />
         </>
     );

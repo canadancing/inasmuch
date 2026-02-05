@@ -10,6 +10,7 @@ import CollaboratorList from '../components/CollaboratorList';
 import DataManagement from '../components/DataManagement';
 import InventoryNicknameModal from '../components/InventoryNicknameModal';
 import AuthForm from '../components/AuthForm';
+import UserAvatar from '../components/UserAvatar';
 
 export default function AccountView({ user, onLogin, onLoginWithEmail, onRegister, onLinkGoogle, onLinkEmail, onUnlinkGoogle, onUnlinkEmail, onLogout, error }) {
     const { currentInventory } = useInventory();
@@ -221,150 +222,102 @@ export default function AccountView({ user, onLogin, onLoginWithEmail, onRegiste
         );
     }
 
+
+
     return (
         <div className="max-w-2xl mx-auto space-y-4 animate-fade-in px-4">
             {/* Profile Card with User ID & Integration */}
             <div className="card overflow-hidden !rounded-[2rem]">
                 <div className="p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        {user.photoURL ? (
-                            <img
-                                src={user.photoURL}
-                                alt={user.displayName}
-                                className="w-14 h-14 rounded-xl shadow-md"
-                            />
-                        ) : (
-                            <div className="w-14 h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-500 font-black text-xl">
-                                {user.displayName?.charAt(0) || user.email?.charAt(0) || '?'}
+                    <div className="flex items-center gap-4">
+                        <UserAvatar user={user} size="lg" className="shadow-lg" />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight truncate">
+                                    {user.displayName || 'Unnamed User'}
+                                </h2>
+                                <button
+                                    onClick={handleCopyId}
+                                    className="group/id relative px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-[10px] font-bold text-gray-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                                    title="Click to copy User ID"
+                                >
+                                    <span className="font-mono tracking-wider">#{userProfile?.userId || '---'}</span>
+                                    {copied && (
+                                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded-lg animate-fade-in-up whitespace-nowrap">
+                                            Copied!
+                                        </span>
+                                    )}
+                                </button>
                             </div>
-                        )}
-                        <div className="flex-1">
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">
-                                {user.displayName || 'Unnamed User'}
-                            </h2>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {user.email?.endsWith('@inasmuch.local')
                                     ? user.email.split('@')[0]
                                     : user.email}
                             </p>
                         </div>
                     </div>
-
-                    {/* Unified Identity & Search Section */}
-                    <div className="bg-gradient-to-br from-primary-50/50 via-white/20 to-accent-50/50 dark:from-primary-900/20 dark:via-gray-900/10 dark:to-accent-900/20 rounded-[1.5rem] p-6 border border-white/40 dark:border-primary-800/30 shadow-inner relative group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-500/70 dark:text-primary-400/70">
-                                    Your Identity
-                                </span>
-                            </div>
-                            <button
-                                onClick={handleCopyId}
-                                className="group/btn relative px-3 py-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 text-[9px] font-black uppercase tracking-widest text-primary-500 hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm"
-                            >
-                                <span>{copied ? '✓ Copied' : '📋 Copy ID'}</span>
-                            </button>
-                        </div>
-
-                        <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-2 font-mono">
-                            {userProfile?.userId || '------'}
-                        </div>
-
-                        {/* Unified Inventory Name & Edit/Remark Snippet */}
-                        {currentInventory && (
-                            <div className="mt-6 p-4 bg-white/40 dark:bg-black/20 rounded-2xl border border-white/40 dark:border-primary-800/20 shadow-sm backdrop-blur-md group/inv transition-all hover:bg-white/60 dark:hover:bg-black/30">
-                                <div className="flex items-center justify-between">
-                                    <div className="min-w-0 pr-4">
-                                        <div className="text-[8px] font-black uppercase tracking-[0.2em] text-primary-500/70 dark:text-primary-400/70 mb-1">
-                                            {currentInventory.isOwner ? 'Public Inventory Name' : 'My Private Remark'}
-                                        </div>
-                                        <div className="text-base font-black text-gray-900 dark:text-white truncate">
-                                            {currentInventory.displayName}
-                                        </div>
-                                        {currentInventory.isOwner && currentInventory.nickname && (
-                                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">
-                                                Everyone sees this name
-                                            </div>
-                                        )}
-                                        {!currentInventory.isOwner && (
-                                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">
-                                                Only you see this name
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => setShowNicknameModal(true)}
-                                        className="px-4 py-2 rounded-xl bg-primary-500 text-white text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all flex-shrink-0 shadow-lg shadow-primary-500/20 active:scale-95 flex items-center gap-2"
-                                    >
-                                        <span>{currentInventory.isOwner ? 'Edit' : 'Remark'}</span>
-                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-
-
-
-                        {/* Integrated Search Bar - Compact Apple Style */}
-                        <div className="relative group/search">
-                            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                                <svg className={`w-4 h-4 transition-colors duration-300 ${searching ? 'text-primary-500 animate-spin' : 'text-gray-400 group-focus-within/search:text-primary-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                value={searchId}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                                    setSearchId(value);
-                                    setSearchResult(null);
-                                }}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                placeholder="Find collaborators..."
-                                maxLength={6}
-                                className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/70 dark:bg-black/30 backdrop-blur-xl border border-transparent focus:border-primary-500/30 focus:bg-white dark:focus:bg-black/50 text-gray-900 dark:text-white text-sm font-bold tracking-tight shadow-sm transition-all duration-500 placeholder:text-gray-400 outline-none"
-                            />
-                            {searchId.length === 6 && !searching && !searchResult && (
-                                <button
-                                    onClick={handleSearch}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 active:scale-95 transition-all"
-                                >
-                                    Find
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Search Result Peek */}
-                        {searchResult && searchResult !== 'not_found' && (
-                            <div className="mt-3 p-3 rounded-2xl bg-white/90 dark:bg-gray-900/90 border border-primary-100 dark:border-primary-800 shadow-xl animate-scale-in flex items-center gap-3">
-                                <img src={searchResult.photoURL} className="w-9 h-9 rounded-xl" alt="" />
-                                <div className="flex-1">
-                                    <p className="text-xs font-black text-gray-900 dark:text-white">{searchResult.displayName}</p>
-                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">ID: {searchResult.userId}</p>
-                                </div>
-                                <button
-                                    onClick={() => setShowRequestModal(true)}
-                                    className="px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[9px] font-black uppercase tracking-widest hover:shadow-lg active:scale-95 transition-all"
-                                >
-                                    Connect
-                                </button>
-                            </div>
-                        )}
-
-                        {searchResult === 'not_found' && (
-                            <div className="mt-3 p-3 rounded-2xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 text-center">
-                                <p className="text-[10px] font-bold text-red-500">No user found with ID {searchId}</p>
-                            </div>
-                        )}
-
-                        <CollaboratorList user={user} />
-                    </div>
                 </div>
+            </div>
+
+
+
+            {/* Collaborators Section */}
+            <div className="bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-black rounded-[2rem] p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+
+                {/* Search Bar */}
+                <div className="relative group/search mb-4">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <svg className={`w-4 h-4 transition-colors duration-300 ${searching ? 'text-primary-500 animate-spin' : 'text-gray-400 group-focus-within/search:text-primary-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        value={searchId}
+                        onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setSearchId(value);
+                            setSearchResult(null);
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        placeholder="Find collaborators by ID..."
+                        maxLength={6}
+                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:border-primary-500/30 focus:bg-white dark:focus:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold tracking-tight shadow-sm transition-all duration-500 placeholder:text-gray-400 outline-none"
+                    />
+                    {searchId.length === 6 && !searching && !searchResult && (
+                        <button
+                            onClick={handleSearch}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 active:scale-95 transition-all"
+                        >
+                            Find
+                        </button>
+                    )}
+                </div>
+
+                {/* Search Result Peek */}
+                {searchResult && searchResult !== 'not_found' && (
+                    <div className="mb-6 p-3 rounded-2xl bg-white dark:bg-gray-800 border border-primary-100 dark:border-primary-800 shadow-lg animate-scale-in flex items-center gap-3">
+                        <UserAvatar user={searchResult} size="md" />
+                        <div className="flex-1">
+                            <p className="text-xs font-black text-gray-900 dark:text-white">{searchResult.displayName}</p>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">ID: {searchResult.userId}</p>
+                        </div>
+                        <button
+                            onClick={() => setShowRequestModal(true)}
+                            className="px-3 py-1.5 rounded-xl bg-primary-500 text-white text-[9px] font-black uppercase tracking-widest hover:shadow-lg active:scale-95 transition-all"
+                        >
+                            Connect
+                        </button>
+                    </div>
+                )}
+
+                {searchResult === 'not_found' && (
+                    <div className="mb-6 p-3 rounded-2xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 text-center">
+                        <p className="text-[10px] font-bold text-red-500">No user found with ID {searchId}</p>
+                    </div>
+                )}
+
+                <CollaboratorList user={user} />
             </div>
 
             {/* Security & Integrations */}

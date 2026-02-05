@@ -21,11 +21,13 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
 
     if (showStockOnly) {
         return (
-            <button
-                onClick={() => onSelect(item)}
-                className="card-interactive p-6 flex flex-col items-center gap-4 relative group transition-all duration-300 hover:scale-105"
-            >
-                {content}
+            <div className="relative group">
+                <button
+                    onClick={() => onSelect(item)}
+                    className="card-interactive p-6 flex flex-col items-center gap-4 w-full transition-all duration-300 group-hover:scale-105"
+                >
+                    {content}
+                </button>
                 {/* Consumption (Minus) Button */}
                 {onConsume && (
                     <button
@@ -33,7 +35,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                             e.stopPropagation();
                             onConsume(item);
                         }}
-                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-red-600"
+                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-red-600 z-10"
                         title="Log Consumption"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -48,7 +50,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                             e.stopPropagation();
                             onRestock(item);
                         }}
-                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-primary-600"
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-primary-600 z-10"
                         title="Restock Item"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -63,7 +65,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                             e.stopPropagation();
                             onHideItem(item.id);
                         }}
-                        className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-gray-700 dark:hover:bg-gray-600"
+                        className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-gray-700 dark:hover:bg-gray-600 z-10"
                         title="Hide Item"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -78,7 +80,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                             e.stopPropagation();
                             onShowRecords(item);
                         }}
-                        className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-blue-600"
+                        className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-blue-600 z-10"
                         title="View Records"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -86,7 +88,7 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                         </svg>
                     </button>
                 )}
-            </button>
+            </div>
         );
     }
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
@@ -188,6 +188,40 @@ export function InventoryProvider({ children, user }) {
         }
     };
 
+    // Delete inventory
+    const deleteInventory = async (inventoryId) => {
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
+
+        // Safety check: prevent deleting last inventory
+        if (inventories.length <= 1) {
+            throw new Error('Cannot delete your only inventory. You must have at least one inventory.');
+        }
+
+        // Safety check: only owner can delete
+        const inventory = inventories.find(inv => inv.id === inventoryId);
+        if (!inventory || !inventory.isOwner) {
+            throw new Error('Only the owner can delete this inventory');
+        }
+
+        try {
+            // Delete the inventory document
+            await deleteDoc(doc(db, 'inventories', inventoryId));
+
+            // If deleting current inventory, switch to another one
+            if (currentInventoryId === inventoryId) {
+                const remaining = inventories.filter(inv => inv.id !== inventoryId);
+                if (remaining.length > 0) {
+                    await switchInventory(remaining[0].id);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting inventory:', error);
+            throw error;
+        }
+    };
+
     const updateInventoryPublicName = async (inventoryId, nickname) => {
         if (!user) return;
 
@@ -226,6 +260,7 @@ export function InventoryProvider({ children, user }) {
             permissions,
             switchInventory,
             createInventory,
+            deleteInventory,
             updateInventoryPublicName,
             updateCollaboratorPrivateName,
             loading,

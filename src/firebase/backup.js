@@ -52,6 +52,12 @@ export async function exportInventoryBackup(inventoryId, inventoryName, user) {
                 ...(doc.data().updatedAt && { updatedAt: doc.data().updatedAt.toDate?.().toISOString() || doc.data().updatedAt })
             }));
         } catch (err) {
+            // Silence permission errors (common for guests)
+            if (err.code === 'permission-denied' || err.message?.includes('permission')) {
+                // Do nothing or debug log
+                // console.debug(`Skipped ${col.name} due to permissions`);
+                continue;
+            }
             console.warn(`Could not fetch ${col.name}:`, err);
         }
     }

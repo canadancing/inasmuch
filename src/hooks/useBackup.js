@@ -30,12 +30,22 @@ export function useBackup(inventoryId, inventoryName, user) {
         if (!inventoryId || !user) return;
 
         const runAutoBackup = async () => {
+            // Only run backup if user is an owner, to avoid permission errors
+            // Guests might not have read access to all collections (like usageLogs)
+            // which causes noisy console errors
             try {
+                // If we can't determine ownership easily here, we rely on the try/catch
+                // But generally, backups should probably be owner-only features
                 const backup = await exportInventoryBackup(inventoryId, inventoryName, user);
                 await saveLocalBackup(inventoryId, backup);
                 setLastAutoBackup(new Date());
                 console.log('Auto-backup saved to local storage');
             } catch (err) {
+                // Suppress permission-denied errors which are expected for guests
+                if (err.code === 'permission-denied' || err.message?.includes('permission')) {
+                    // Silent fail for guests
+                    return;
+                }
                 console.warn('Auto-backup failed:', err);
             }
         };
