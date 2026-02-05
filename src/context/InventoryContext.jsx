@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
 import { calculatePermissions } from '../types/inventory';
 
 const InventoryContext = createContext();
@@ -152,6 +152,42 @@ export function InventoryProvider({ children, user }) {
         setCurrentInventoryId(id);
     };
 
+    // Create new inventory
+    const createInventory = async ({ name, description = '' }) => {
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
+
+        if (!name || !name.trim()) {
+            throw new Error('Inventory name is required');
+        }
+
+        try {
+            const newInventory = {
+                name: name.trim(),
+                description: description.trim(),
+                ownerName: user.displayName || user.email || 'Unknown User',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                collaborators: {},
+                collaboratorUids: [],
+                ownerId: user.uid
+            };
+
+            const docRef = await addDoc(collection(db, 'inventories'), newInventory);
+
+            // The real-time listener will automatically pick up the new inventory
+            // Just switch to it
+            setCurrentInventoryId(docRef.id);
+            sessionStorage.setItem('currentInventoryId', docRef.id);
+
+            return docRef.id;
+        } catch (error) {
+            console.error('Error creating inventory:', error);
+            throw error;
+        }
+    };
+
     const updateInventoryPublicName = async (inventoryId, nickname) => {
         if (!user) return;
 
@@ -189,6 +225,7 @@ export function InventoryProvider({ children, user }) {
             currentInventoryId,
             permissions,
             switchInventory,
+            createInventory,
             updateInventoryPublicName,
             updateCollaboratorPrivateName,
             loading,
