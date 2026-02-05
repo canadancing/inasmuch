@@ -31,6 +31,10 @@ service cloud.firestore {
         (isSignedIn() && getUserId() in inventory.collaborators);
     }
     
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email == 'loading800@gmail.com';
+    }
+    
     // ============================================
     // USERS COLLECTION
     // ============================================
@@ -50,8 +54,12 @@ service cloud.firestore {
     // ============================================
     
     match /inventories/{inventoryId} {
-      // Can read if: owner OR collaborator
-      allow read: if hasViewAccess(inventoryId);
+      // Can get individual document if: owner OR collaborator OR super admin
+      allow get: if hasViewAccess(inventoryId) || isSuperAdmin();
+      
+      // Can list/query inventories if: signed in (app-level filtering by ownerId/collaboratorUids)
+      // OR super admin (can see all)
+      allow list: if isSignedIn() || isSuperAdmin();
       
       // Can create if: user is setting themselves as owner
       allow create: if isSignedIn() && 
@@ -112,8 +120,7 @@ service cloud.firestore {
         allow update: if isOwner(inventoryId);
         allow delete: if isOwner(inventoryId);
       }
-    }
-    
+      
       // ============================================
       // AUDIT SUBCOLLECTION (Immutable)
       // ============================================

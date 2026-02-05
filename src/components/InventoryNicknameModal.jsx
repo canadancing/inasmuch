@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useInventory } from '../context/InventoryContext';
 
 export default function InventoryNicknameModal({ isOpen, onClose, target, type = 'public', onSuccess }) {
@@ -36,13 +37,13 @@ export default function InventoryNicknameModal({ isOpen, onClose, target, type =
 
     if (!isOpen || !target) return null;
 
-    return (
+    return createPortal(
         <div
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl animate-scale-in overflow-hidden"
+                className="w-full max-w-md max-h-[90vh] bg-white dark:bg-gray-900 rounded-3xl shadow-2xl animate-scale-in overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
@@ -73,7 +74,7 @@ export default function InventoryNicknameModal({ isOpen, onClose, target, type =
                             autoFocus
                         />
                         <div className="mt-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed break-words">
                                 {type === 'public'
                                     ? 'This name will be visible to all collaborators invited to this inventory.'
                                     : `This name is private to you. Only you will see "${nickname || '...'}" instead of "${target?.displayName || target?.name}".`}
@@ -99,6 +100,7 @@ export default function InventoryNicknameModal({ isOpen, onClose, target, type =
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

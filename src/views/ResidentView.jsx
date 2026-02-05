@@ -405,10 +405,23 @@ export default function ResidentView({
 
                 {filteredItems.length === 0 ? (
                     <div className="text-center py-12">
-                        <div className="text-5xl mb-3 opacity-30">🔍</div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {searchQuery ? `No items found for "${searchQuery}"` : 'No items available'}
+                        <div className="text-5xl mb-3 opacity-30">
+                            {searchQuery ? '🔍' : '📦'}
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            {searchQuery ? `No items found for "${searchQuery}"` : 'No items in your inventory yet'}
                         </p>
+                        {!searchQuery && onAddItem && (
+                            <button
+                                onClick={() => setShowAddItemModal(true)}
+                                className="px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 shadow-lg shadow-primary-500/20 active:scale-95 transition-all inline-flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Your First Item
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <ItemGrid

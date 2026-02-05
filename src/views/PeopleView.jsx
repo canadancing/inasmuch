@@ -288,13 +288,26 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 {/* Entity Grid */}
                 {filteredEntities.length === 0 ? (
                     <div className="text-center py-16">
-                        <div className="text-6xl mb-4 opacity-30">👥</div>
+                        <div className="text-6xl mb-4 opacity-30">
+                            {searchQuery ? '🔍' : '👥'}
+                        </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                             {searchQuery ? 'No results found' : 'No people or locations yet'}
                         </p>
-                        <p className="text-gray-500 dark:text-gray-400">
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">
                             {searchQuery ? 'Try a different search term' : 'Add people from the Admin page'}
                         </p>
+                        {!searchQuery && (
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 shadow-lg shadow-primary-500/20 active:scale-95 transition-all inline-flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Person or Location
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

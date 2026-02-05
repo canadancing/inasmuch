@@ -50,12 +50,12 @@ export function InventoryProvider({ children, user }) {
                     };
                 });
 
-                // 3. Get all inventories to find ones where user is a collaborator
-                const allRef = collection(db, 'inventories');
-                const allSnapshot = await getDocs(allRef);
-                const collaboratedInventories = allSnapshot.docs
+                // 3. Get collaborated inventories using collaboratorUids array
+                const collabRef = collection(db, 'inventories');
+                const collabQuery = query(collabRef, where('collaboratorUids', 'array-contains', user.uid));
+                const collabSnapshot = await getDocs(collabQuery);
+                const collaboratedInventories = collabSnapshot.docs
                     .map(doc => ({ ...doc.data(), id: doc.id }))
-                    .filter(inv => inv.collaborators && inv.collaborators[user.uid])
                     .map(inv => {
                         // Apply private remark to owner name if available
                         const ownerRemark = collaboratorNicknames[inv.ownerId];
@@ -95,11 +95,29 @@ export function InventoryProvider({ children, user }) {
         // Real-time listener for owned inventories
         const inventoriesRef = collection(db, 'inventories');
         const qOwned = query(inventoriesRef, where('ownerId', '==', user.uid));
-        const unsubOwned = onSnapshot(qOwned, () => loadInventories());
+        const unsubOwned = onSnapshot(
+            qOwned,
+            () => loadInventories(),
+            (error) => {
+                // Suppress expected permission errors for new users with no inventories
+                if (error.code !== 'permission-denied') {
+                    console.error('Error in owned inventories listener:', error);
+                }
+            }
+        );
 
         // Real-time listener for collaborated inventories (using collaboratorUids array)
         const qCollaborated = query(inventoriesRef, where('collaboratorUids', 'array-contains', user.uid));
-        const unsubCollaborated = onSnapshot(qCollaborated, () => loadInventories());
+        const unsubCollaborated = onSnapshot(
+            qCollaborated,
+            () => loadInventories(),
+            (error) => {
+                // Suppress expected permission errors for users not yet collaborating
+                if (error.code !== 'permission-denied') {
+                    console.error('Error in collaborated inventories listener:', error);
+                }
+            }
+        );
 
         // Real-time listener for user profile (to detect nickname/remark changes)
         const qUser = query(collection(db, 'users'), where('uid', '==', user.uid));

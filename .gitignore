@@ -46,5 +46,6 @@ Desktop.ini
 *.bak
 *.tmp
 
-# Migration scripts (may contain sensitive credentials)
-migrate-*.js
+# Firebase sensitive files - DO NOT COMMIT
+serviceAccountKey.json
+*serviceAccount*.json
