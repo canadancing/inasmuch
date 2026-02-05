@@ -1,7 +1,47 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import FilterBar from './FilterBar';
 
 export default function Statistics({ logs, items, residents, onRestock }) {
-    // Calculate dashboard statistics
+    // Filter state
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [selectedPeople, setSelectedPeople] = useState([]);
+    const [selectedLocations, setSelectedLocations] = useState([]);
+    const [dateRange, setDateRange] = useState({ start: null, end: null });
+
+    // Apply filters to logs
+    const filteredLogs = useMemo(() => {
+        return logs.filter(log => {
+            // Item filter
+            if (selectedItems.length > 0 && !selectedItems.includes(log.itemId)) {
+                return false;
+            }
+
+            // People filter
+            if (selectedPeople.length > 0 && !selectedPeople.includes(log.residentId)) {
+                return false;
+            }
+
+            // Location filter (from item's location)
+            if (selectedLocations.length > 0) {
+                const item = items.find(i => i.id === log.itemId);
+                if (!item || !selectedLocations.includes(item.location)) {
+                    return false;
+                }
+            }
+
+            // Date range filter
+            if (dateRange.start) {
+                const logDate = log.date?.toDate?.() || new Date(log.date);
+                if (logDate < dateRange.start || logDate > dateRange.end) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }, [logs, selectedItems, selectedPeople, selectedLocations, dateRange, items]);
+
+    // Calculate dashboard statistics using filtered logs
     const stats = useMemo(() => {
         const totalItems = items.length;
         const totalResidents = residents.length;
@@ -11,9 +51,9 @@ export default function Statistics({ logs, items, residents, onRestock }) {
         const outOfStockItems = items.filter(i => i.currentStock === 0);
         const wellStockedItems = items.filter(i => i.currentStock > (i.minStock || 0));
 
-        // Top consumed items
+        // Top consumed items - using filtered logs
         const itemUsage = {};
-        logs.forEach(log => {
+        filteredLogs.forEach(log => {
             if (log.action === 'used' && log.itemName) {
                 itemUsage[log.itemName] = (itemUsage[log.itemName] || 0) + (log.quantity || 0);
             }
@@ -24,17 +64,17 @@ export default function Statistics({ logs, items, residents, onRestock }) {
             .slice(0, 5)
             .map(([name, count]) => ({ name, count }));
 
-        // Recent trend (last 7 days vs previous 7 days)
+        // Recent trend (last 7 days vs previous 7 days) - using filtered logs
         const now = new Date();
         const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
         const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
 
-        const recentLogs = logs.filter(log => {
+        const recentLogs = filteredLogs.filter(log => {
             const logDate = log.date?.toDate?.() || new Date(log.date);
             return logDate >= sevenDaysAgo;
         });
 
-        const previousLogs = logs.filter(log => {
+        const previousLogs = filteredLogs.filter(log => {
             const logDate = log.date?.toDate?.() || new Date(log.date);
             return logDate >= fourteenDaysAgo && logDate < sevenDaysAgo;
         });
@@ -64,10 +104,24 @@ export default function Statistics({ logs, items, residents, onRestock }) {
             trend,
             healthScore
         };
-    }, [items, residents, logs]);
+    }, [items, residents, filteredLogs]);
 
     return (
         <div className="space-y-6 animate-fade-in">
+            {/* Filter Bar */}
+            <FilterBar
+                items={items}
+                residents={residents}
+                selectedItems={selectedItems}
+                setSelectedItems={setSelectedItems}
+                selectedPeople={selectedPeople}
+                setSelectedPeople={setSelectedPeople}
+                selectedLocations={selectedLocations}
+                setSelectedLocations={setSelectedLocations}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+            />
+
             {/* 1. Hero Metrics Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="card p-5 border-l-4 border-primary-500">
