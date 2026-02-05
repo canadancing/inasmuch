@@ -3,15 +3,22 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 
-// Firebase config from .env
+// Firebase config from environment variables
 const firebaseConfig = {
-    apiKey: 'AIzaSyDeoz2takCZM00ycA87NQOogpLutxZsA9s',
-    authDomain: 'inasmuch-909c7.firebaseapp.com',
-    projectId: 'inasmuch-909c7',
-    storageBucket: 'inasmuch-909c7.firebasestorage.app',
-    messagingSenderId: '984547364434',
-    appId: '1:984547364434:web:1caed19d0d50cd5d89d98b'
+    apiKey: process.env.VITE_FIREBASE_API_KEY,
+    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.VITE_FIREBASE_APP_ID
 };
+
+// Validate config
+if (!firebaseConfig.apiKey) {
+    console.error('❌ Error: Firebase configuration missing. Make sure to run with environment variables.');
+    console.error('Usage: node --env-file=.env migrations/add-collaborator-uids.js');
+    process.exit(1);
+}
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
