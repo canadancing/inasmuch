@@ -10,6 +10,7 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
     const [restockDate, setRestockDate] = useState(new Date().toISOString().split('T')[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
     // Refs for click-outside detection
     const itemDropdownRef = useRef(null);
@@ -52,6 +53,25 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
             setSelectedItems(preselected);
         }
     }, [isOpen, items]);
+
+    // Auto-select current user as person when modal opens
+    useEffect(() => {
+        if (isOpen && !hasAutoSelected && user) {
+            // Create a virtual person object from the current user
+            const nameParts = (user.displayName || user.email || 'Current User').split(' ');
+            const currentUserPerson = {
+                id: user.uid,
+                firstName: nameParts[0] || user.email,
+                lastName: nameParts.slice(1).join(' ') || '',
+                room: user.email || 'Current User'
+            };
+            setSelectedPerson(currentUserPerson);
+            setHasAutoSelected(true);
+        } else if (!isOpen) {
+            // Reset auto-selection flag when modal closes
+            setHasAutoSelected(false);
+        }
+    }, [isOpen, user, hasAutoSelected]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);
