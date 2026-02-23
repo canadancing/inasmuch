@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import AddPersonModal from './AddPersonModal';
 
-export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView, residents, onAddResident, tags = [] }) {
-    const [selectedPerson, setSelectedPerson] = useState(null);
+export default function RestockModal({ isOpen, onClose, items, onRestock, user, setCurrentView, residents, onAddResident, tags = [], initialPerson = null, initialItems = null }) {
+    const [selectedPerson, setSelectedPerson] = useState(initialPerson);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
     const [personSearch, setPersonSearch] = useState('');
@@ -51,31 +51,39 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
 
     // Auto-select items when modal opens
     useEffect(() => {
-        if (isOpen && items && items.length > 0 && selectedItems.length === 0) {
-            // Pre-select the items passed to the modal
-            const preselected = items.map(item => ({ item, quantity: 1 }));
-            setSelectedItems(preselected);
+        if (isOpen && selectedItems.length === 0) {
+            // Only explicitly map initialItems if they exist; we NEVER fallback to preselecting everything.
+            if (initialItems && initialItems.length > 0) {
+                const preselected = initialItems.map(item => ({ item, quantity: 1 }));
+                setSelectedItems(preselected);
+            }
         }
-    }, [isOpen, items]);
+    }, [isOpen, initialItems]);
 
     // Auto-select current user as person when modal opens
     useEffect(() => {
-        if (isOpen && !hasAutoSelected && user) {
-            // Create a virtual person object from the current user
-            const nameParts = (user.displayName || user.email || 'Current User').split(' ');
-            const currentUserPerson = {
-                id: user.uid,
-                firstName: nameParts[0] || user.email,
-                lastName: nameParts.slice(1).join(' ') || '',
-                room: user.email || 'Current User'
-            };
-            setSelectedPerson(currentUserPerson);
-            setHasAutoSelected(true);
-        } else if (!isOpen) {
+        if (isOpen) {
+            if (initialPerson) {
+                setSelectedPerson(initialPerson);
+                setHasAutoSelected(true);
+            } else if (!hasAutoSelected && user) {
+                // Create a virtual person object from the current user
+                const nameParts = (user.displayName || user.email || 'Current User').split(' ');
+                const currentUserPerson = {
+                    id: user.uid,
+                    firstName: nameParts[0] || user.email,
+                    lastName: nameParts.slice(1).join(' ') || '',
+                    room: user.email || 'Current User'
+                };
+                setSelectedPerson(currentUserPerson);
+                setHasAutoSelected(true);
+            }
+        } else {
             // Reset auto-selection flag when modal closes
             setHasAutoSelected(false);
+            if (!initialPerson) setSelectedPerson(null);
         }
-    }, [isOpen, user, hasAutoSelected]);
+    }, [isOpen, user, hasAutoSelected, initialPerson]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);

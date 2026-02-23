@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import RoleBadge from './RoleBadge';
 
-export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], onUpdate, onDelete, tags = [], viewMode = 'analytics' }) {
+export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], onUpdate, onDelete, tags = [], viewMode = 'analytics', onOpenLogModal, onOpenRestockModal }) {
     // Early return MUST come before any hooks to avoid "rendered more hooks" error
     if (!isOpen || !entity) return null;
 
@@ -201,27 +201,56 @@ export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], 
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {!isEditing && onUpdate && (
-                                <button
-                                    onClick={startEditing}
-                                    className="px-4 py-2 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors flex items-center gap-2"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Edit
-                                </button>
-                            )}
-                            {!isEditing && onDelete && (
-                                <button
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                    className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors flex items-center gap-2"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                    Delete
-                                </button>
+                            {!isEditing && (
+                                <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl mr-2">
+                                    <button
+                                        onClick={() => {
+                                            onClose();
+                                            onOpenLogModal?.(entity);
+                                        }}
+                                        title="Log Consumption"
+                                        className="p-2 rounded-lg text-primary-600 dark:text-primary-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm transition-all"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            onClose();
+                                            onOpenRestockModal?.(entity);
+                                        }}
+                                        title="Restock"
+                                        className="p-2 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm transition-all"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                        </svg>
+                                    </button>
+                                    <div className="w-[1px] h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                                    {onUpdate && (
+                                        <button
+                                            onClick={startEditing}
+                                            title="Edit"
+                                            className="p-2 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm transition-all"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    {onDelete && (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            title="Delete"
+                                            className="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm transition-all"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
                             )}
                             <button
                                 onClick={onClose}
@@ -363,96 +392,103 @@ export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], 
                             </div>
                         </div>
                     ) : (
-                        /* View Mode */
-                        <>
-                            {/* Usage Statistics */}
-                            <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                    📊 Usage Statistics
-                                </h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Total consumed:</span>
-                                        <span className="font-bold text-gray-900 dark:text-white">{totalUses || 0} items</span>
+                        /* View Mode - Dashboard Redesign */
+                        <div className="space-y-6">
+                            {/* Dashboard Metrics Row */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100/50 dark:border-blue-800/30">
+                                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                        <span>📅</span> Arrived
                                     </div>
-                                    {stats.topItems.length > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Most used:</span>
-                                            <span className="font-bold text-gray-900 dark:text-white">
-                                                {stats.topItems[0].name} ({stats.topItems[0].percentage}%)
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Usage trend:</span>
-                                        <span className="font-bold text-gray-900 dark:text-white">
-                                            {stats.trend === 'increasing' && '↑ Increasing'}
-                                            {stats.trend === 'decreasing' && '↓ Decreasing'}
-                                            {stats.trend === 'stable' && '→ Stable'}
-                                        </span>
+                                    <div className="text-lg font-black text-gray-900 dark:text-white truncate" title={formatDate(entity.createdAt)}>
+                                        {entity.createdAt ? new Date(entity.createdAt?.toDate ? entity.createdAt.toDate() : entity.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">Last active:</span>
-                                        <span className="font-bold text-gray-900 dark:text-white">{formatLastActive(lastActive)}</span>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100/50 dark:border-emerald-800/30">
+                                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                        <span>⏳</span> Duration
+                                    </div>
+                                    <div className="text-lg font-black text-gray-900 dark:text-white flex items-baseline gap-1">
+                                        {(() => {
+                                            const created = entity.createdAt?.toDate ? entity.createdAt.toDate() : (entity.createdAt ? new Date(entity.createdAt) : null);
+                                            if (!created) return 'N/A';
+                                            const days = Math.floor((new Date() - created) / (1000 * 60 * 60 * 24));
+                                            return <>{Math.max(0, days)}<span className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">days</span></>;
+                                        })()}
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 dark:from-purple-900/20 dark:to-fuchsia-900/20 border border-purple-100/50 dark:border-purple-800/30">
+                                    <div className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                        <span>📦</span> Consumed
+                                    </div>
+                                    <div className="text-lg font-black text-gray-900 dark:text-white flex items-baseline gap-1">
+                                        {totalUses || 0}<span className="text-xs font-medium text-purple-600/70 dark:text-purple-400/70">items</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Top Items */}
+                            {/* Top Items Breakdown */}
                             {stats.topItems.length > 0 && (
-                                <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                    <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                        🏆 Top 5 Items
+                                <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700/50 shadow-sm">
+                                    <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-5 flex items-center gap-2">
+                                        🏆 Most Consumed Items
                                     </h3>
-                                    <div className="space-y-3">
-                                        {stats.topItems.map((item, index) => (
-                                            <div key={item.name} className="flex items-center gap-3">
-                                                <span className="text-2xl">
-                                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
-                                                </span>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="font-semibold text-gray-900 dark:text-white">{item.name}</span>
-                                                        <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
-                                                            {item.count} ({item.percentage}%)
-                                                        </span>
+                                    <div className="space-y-4">
+                                        {stats.topItems.map((item, index) => {
+                                            // Calculate relative width based on the #1 item to make the chart look fuller
+                                            const maxCount = stats.topItems[0].count;
+                                            const relativePercent = (item.count / maxCount) * 100;
+
+                                            return (
+                                                <div key={item.name} className="relative group">
+                                                    <div className="flex items-center justify-between mb-1.5 z-10 relative">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-bold text-gray-400 w-4">{index + 1}.</span>
+                                                            <span className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-500 transition-colors">{item.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <span className="font-black text-gray-700 dark:text-gray-300">{item.count}</span>
+                                                            <span className="text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md">{item.percentage}%</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-primary-500 rounded-full transition-all"
-                                                            style={{ width: `${item.percentage}%` }}
+                                                            className={`h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r ${index === 0 ? 'from-primary-400 to-primary-600' : 'from-gray-300 to-gray-400 dark:from-gray-500 dark:to-gray-600'}`}
+                                                            style={{ width: `${relativePercent}%` }}
                                                         />
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Recent Activity */}
+                            {/* Recent Activity Timeline */}
                             {stats.recentActivity.length > 0 && (
-                                <div className="p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                    <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                        📅 Recent Activity
+                                <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700/50 shadow-sm">
+                                    <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-6 flex items-center gap-2">
+                                        ⏱️ Activity Timeline
                                     </h3>
-                                    <div className="space-y-2">
-                                        {stats.recentActivity.map((log) => (
-                                            <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${log.action === 'used'
-                                                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                        }`}>
-                                                        {log.action}
-                                                    </span>
-                                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                        {log.quantity}× {log.itemName || 'Unknown'}
+                                    <div className="relative pl-3 space-y-6">
+                                        {/* Timeline Line */}
+                                        <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-gray-100 dark:bg-gray-700" />
+
+                                        {stats.recentActivity.map((log, i) => (
+                                            <div key={log.id} className="relative pl-8 animate-in slide-in-from-left-4 fade-in duration-500" style={{ animationDelay: `${i * 50}ms` }}>
+                                                {/* Timeline Dot */}
+                                                <div className={`absolute left-[-5px] top-1.5 w-3.5 h-3.5 rounded-full ring-4 ring-white dark:ring-gray-800 ${log.action === 'used' ? 'bg-red-400 dark:bg-red-500' : 'bg-emerald-400 dark:bg-emerald-500'}`} />
+
+                                                <div className="flex flex-col gap-1">
+                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        {log.action === 'used' ? 'Consumed' : 'Restocked'} <span className="font-extrabold">{log.quantity}×</span> {log.itemName || 'Unknown'}
+                                                    </p>
+                                                    <span className="text-xs font-medium text-gray-400">
+                                                        {formatDate(log.date)}
                                                     </span>
                                                 </div>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {formatDate(log.date)}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>
@@ -461,12 +497,13 @@ export default function EntityDetailModal({ isOpen, onClose, entity, logs = [], 
 
                             {/* Empty State */}
                             {stats.recentActivity.length === 0 && (
-                                <div className="text-center py-8">
-                                    <div className="text-5xl mb-3 opacity-30">📭</div>
-                                    <p className="text-gray-500 dark:text-gray-400">No activity yet</p>
+                                <div className="text-center py-12 px-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border-2 border-dashed border-gray-200 dark:border-gray-700">
+                                    <div className="text-5xl mb-4 opacity-40">📭</div>
+                                    <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">No Activity Yet</h4>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm">When items are consumed or restocked, the history will appear here.</p>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
 

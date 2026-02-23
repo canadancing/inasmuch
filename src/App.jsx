@@ -14,6 +14,8 @@ import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import PeopleView from './views/PeopleView';
 import AccessRequestModal from './components/AccessRequestModal';
+import ConsumptionModal from './components/ConsumptionModal';
+import RestockModal from './components/RestockModal';
 import SuperAdminView from './views/SuperAdminView';
 import { isSuperAdmin as checkIsSuperAdmin } from './config/superAdmin';
 // Import utility for fixing location roles (available in browser console as window.fixLocationRoles)
@@ -64,7 +66,31 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
     const totalAccountNotifications = (pendingRequestsCount || 0) + (unreadNotificationsCount || 0);
     const { permissions: inventoryPermissions } = useInventory();
 
-    const [showLogModal, setShowLogModal] = useState(false);
+    const [showConsumptionModal, setShowConsumptionModal] = useState(false);
+    const [showRestockModal, setShowRestockModal] = useState(false);
+    const [selectedPersonForConsumption, setSelectedPersonForConsumption] = useState(null);
+    const [selectedPersonForRestock, setSelectedPersonForRestock] = useState(null);
+    const [selectedItemsForConsumption, setSelectedItemsForConsumption] = useState(null);
+    const [selectedItemsForRestock, setSelectedItemsForRestock] = useState(null);
+
+    // Helper to find the top 3 most interacted items for a person to pre-fill modals
+    const getTopItemsForPerson = (personId, actionType) => {
+        const personLogs = logs.filter(l => l.residentId === personId && l.action === actionType);
+        if (personLogs.length === 0) return [];
+
+        const counts = {};
+        personLogs.forEach(l => {
+            counts[l.itemId] = (counts[l.itemId] || 0) + 1;
+        });
+
+        const sortedItemIds = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1]) // highest first
+            .slice(0, 3) // take top 3
+            .map(e => e[0]);
+
+        return items.filter(i => sortedItemIds.includes(i.id));
+    };
+
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [upgradeContext, setUpgradeContext] = useState(null);
 
@@ -201,6 +227,16 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                         onUpdateResident={updateResident}
                         onDeleteResident={deleteResident}
                         tags={tags}
+                        onOpenLogModal={(person) => {
+                            setSelectedPersonForConsumption(person);
+                            setSelectedItemsForConsumption(getTopItemsForPerson(person.id, 'used'));
+                            setShowConsumptionModal(true);
+                        }}
+                        onOpenRestockModal={(person) => {
+                            setSelectedPersonForRestock(person);
+                            setSelectedItemsForRestock(getTopItemsForPerson(person.id, 'restocked'));
+                            setShowRestockModal(true);
+                        }}
                     />
                 ) : currentView === 'stock' ? (
                     <ResidentView
@@ -269,6 +305,42 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                     <SuperAdminView user={user} />
                 ) : null}
             </main>
+
+            {/* Global Modals for people view cross-features */}
+            <ConsumptionModal
+                isOpen={showConsumptionModal}
+                onClose={() => {
+                    setShowConsumptionModal(false);
+                    setSelectedPersonForConsumption(null);
+                    setSelectedItemsForConsumption(null);
+                }}
+                items={items}
+                residents={residents}
+                onLog={addLog}
+                onAddResident={addResident}
+                setCurrentView={setCurrentView}
+                user={user}
+                tags={tags}
+                initialPerson={selectedPersonForConsumption}
+                initialItems={selectedItemsForConsumption}
+            />
+
+            <RestockModal
+                isOpen={showRestockModal}
+                onClose={() => {
+                    setShowRestockModal(false);
+                    setSelectedPersonForRestock(null);
+                    setSelectedItemsForRestock(null);
+                }}
+                items={items}
+                residents={residents}
+                onRestock={restockItem}
+                setCurrentView={setCurrentView}
+                user={user}
+                tags={tags}
+                initialPerson={selectedPersonForRestock}
+                initialItems={selectedItemsForRestock}
+            />
 
             {/* Bottom Nav - iOS Dock Style with Glassmorphism */}
             <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">

@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import AddPersonModal from './AddPersonModal';
 
-export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident, tags = [] }) {
-    const [selectedPerson, setSelectedPerson] = useState(null);
+export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident, tags = [], initialPerson = null }) {
+    const [selectedPerson, setSelectedPerson] = useState(initialPerson);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [itemSearch, setItemSearch] = useState('');
     const [personSearch, setPersonSearch] = useState('');
@@ -72,35 +72,39 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
     // Auto-select items when modal opens
     useEffect(() => {
         if (isOpen && selectedItems.length === 0) {
-            // Pre-select the initialItems passed to the modal (if provided), otherwise items
-            const itemsToPreselect = initialItems && initialItems.length > 0 ? initialItems : items;
-            if (itemsToPreselect && itemsToPreselect.length > 0) {
-                const preselected = itemsToPreselect.map(item => ({ item, quantity: 1 }));
+            // Only explicitly map initialItems if they exist; we NEVER fallback to preselecting everything.
+            if (initialItems && initialItems.length > 0) {
+                const preselected = initialItems.map(item => ({ item, quantity: 1 }));
                 setSelectedItems(preselected);
             }
         }
     }, [isOpen, initialItems]);
 
-    // Auto-select current user ONCE when modal opens
+    // Auto-select initialPerson or current user ONCE when modal opens
     useEffect(() => {
-        if (isOpen && !hasAutoSelected && user) {
-            // Auto-select current user on first open
-            const nameParts = (user.displayName || user.email || 'Current User').split(' ');
-            const currentUserPerson = {
-                id: user.uid,
-                firstName: nameParts[0] || user.email,
-                lastName: nameParts.slice(1).join(' ') || '',
-                room: user.email || 'Current User',
-                isCurrentUser: true
-            };
-            setSelectedPerson(currentUserPerson);
-            setHasAutoSelected(true);
-        } else if (!isOpen) {
+        if (isOpen) {
+            if (initialPerson) {
+                setSelectedPerson(initialPerson);
+                setHasAutoSelected(true);
+            } else if (!hasAutoSelected && user) {
+                // Auto-select current user on first open
+                const nameParts = (user.displayName || user.email || 'Current User').split(' ');
+                const currentUserPerson = {
+                    id: user.uid,
+                    firstName: nameParts[0] || user.email,
+                    lastName: nameParts.slice(1).join(' ') || '',
+                    room: user.email || 'Current User',
+                    isCurrentUser: true
+                };
+                setSelectedPerson(currentUserPerson);
+                setHasAutoSelected(true);
+            }
+        } else {
             // Reset on close
-            setSelectedPerson(null);
+            if (!initialPerson) setSelectedPerson(null);
             setHasAutoSelected(false);
         }
-    }, [isOpen, user, hasAutoSelected]);
+    }, [isOpen, user, hasAutoSelected, initialPerson]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);

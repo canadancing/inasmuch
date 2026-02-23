@@ -54,30 +54,34 @@ export default function EntityCard({ entity, onClick, viewMode = 'analytics', on
         <div
             className={`p-3 rounded-xl border-2 ${borderColor} ${bgColor} hover:scale-[1.02] transition-all cursor-pointer relative`}
         >
-            {/* Management Actions - Always Visible */}
-            <div className="flex gap-2 mb-3">
-                {isMovedOut ? (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onReactivate?.();
-                        }}
-                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-                    >
-                        ↩️ Reactivate
-                    </button>
-                ) : (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onMoveOut?.();
-                        }}
-                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors"
-                    >
-                        📦 Move Out
-                    </button>
-                )}
-            </div>
+            {/* Archive/Restore Action - Absolute Top Right */}
+            {isMovedOut ? (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onReactivate?.();
+                    }}
+                    className="absolute top-3 right-3 p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors z-10"
+                    title="Reactivate Entity"
+                >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                </button>
+            ) : (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveOut?.();
+                    }}
+                    className="absolute top-3 right-3 p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors z-10"
+                    title="Archive / Move Out"
+                >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                </button>
+            )}
 
             {/* Avatar and Name - Always Clickable */}
             <div

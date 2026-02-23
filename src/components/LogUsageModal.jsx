@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import AddPersonModal from './AddPersonModal';
 
-export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView, onAddResident, tags = [] }) {
-    const [selectedResident, setSelectedResident] = useState(null);
+export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView, onAddResident, tags = [], initialResident = null }) {
+    const [selectedResident, setSelectedResident] = useState(initialResident);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
     const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState('');
@@ -46,11 +46,17 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
         if (isOpen) {
             // Use capture phase to detect clicks before they reach the input
             document.addEventListener('mousedown', handleClickOutside, true);
+            if (initialResident) {
+                setSelectedResident(initialResident);
+            }
+        } else {
+            // Reset when closing
+            if (!initialResident) setSelectedResident(null);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside, true);
         };
-    }, [isOpen]);
+    }, [isOpen, initialResident]);
 
     const handleAddItem = (item) => {
         const existing = selectedItems.find(si => si.item.id === item.id);

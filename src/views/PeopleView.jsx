@@ -5,7 +5,7 @@ import AddPersonModal from '../components/AddPersonModal';
 import StatusBadge from '../components/StatusBadge';
 import MoveOutModal from '../components/MoveOutModal';
 
-export default function PeopleView({ residents = [], logs = [], onAddResident, onUpdateResident, onDeleteResident, tags = [] }) {
+export default function PeopleView({ residents = [], logs = [], onAddResident, onUpdateResident, onDeleteResident, tags = [], onOpenLogModal, onOpenRestockModal }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'residents', 'guests', 'staff', 'locations'
     const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'moved_out', 'all_statuses'
@@ -151,65 +151,45 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
         <div className="flex-1 overflow-y-auto pb-24">
             <div className="p-8">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-                        <span>👥</span>
-                        PEOPLE
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        View consumption by residents, common areas, and staff
-                    </p>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800">
-                        <div className="text-3xl font-black text-blue-600 dark:text-blue-400">{stats.total}</div>
-                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Total Entities</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-200 dark:border-emerald-800">
-                        <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{stats.residents}</div>
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Residents</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800">
-                        <div className="text-3xl font-black text-purple-600 dark:text-purple-400">{stats.guests}</div>
-                        <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Guests</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-pink-50 dark:bg-pink-900/20 border-2 border-pink-200 dark:border-pink-800">
-                        <div className="text-3xl font-black text-pink-600 dark:text-pink-400">{stats.locations}</div>
-                        <div className="text-xs font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wide">Locations</div>
+                <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+                            <span>👥</span>
+                            PEOPLE
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            View consumption by residents, common areas, and staff
+                        </p>
                     </div>
                 </div>
 
-                {/* Most Active Entity */}
-                {stats.mostActive && stats.mostActive.totalUses > 0 && (
-                    <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-2 border-primary-200 dark:border-primary-800">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">🏆</span>
-                            <div>
-                                <p className="text-sm font-semibold text-primary-600 dark:text-primary-400">Most Active</p>
-                                <p className="font-black text-gray-900 dark:text-white">
-                                    {stats.mostActive.name} ({stats.mostActive.totalUses} uses)
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Search and Filters */}
+                {/* Search, Actions, and Filters */}
                 <div className="flex flex-col gap-4 mb-6">
-                    {/* Search */}
-                    <div className="relative w-full">
-                        <input
-                            type="text"
-                            placeholder="Search people and locations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-4 py-3 pl-11 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500"
-                        />
-                        <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <input
+                                type="text"
+                                placeholder="Search people and locations..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full px-4 py-3 pl-11 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-colors"
+                            />
+                            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+
+                        {/* Primary Action Button */}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 shadow-lg shadow-primary-500/20 active:scale-95 transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Person or Location
+                        </button>
                     </div>
 
                     {/* Filter Tabs */}
@@ -217,47 +197,47 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                         <button
                             onClick={() => setRoleFilter('all')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'all'
-                                ? 'bg-primary-500 text-white'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            All
+                            All <span className="opacity-70 ml-1">[{stats.total}]</span>
                         </button>
                         <button
                             onClick={() => setRoleFilter('residents')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'residents'
-                                ? 'bg-primary-500 text-white'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            🏠 Residents
+                            🏠 Residents <span className="opacity-70 ml-1">[{stats.residents}]</span>
                         </button>
                         <button
                             onClick={() => setRoleFilter('guests')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'guests'
-                                ? 'bg-primary-500 text-white'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            🎒 Guests
+                            🎒 Guests <span className="opacity-70 ml-1">[{stats.guests}]</span>
                         </button>
                         <button
                             onClick={() => setRoleFilter('locations')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'locations'
-                                ? 'bg-primary-500 text-white'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            📍 Locations
+                            📍 Locations <span className="opacity-70 ml-1">[{stats.locations}]</span>
                         </button>
                         <button
                             onClick={() => setRoleFilter('staff')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'staff'
-                                ? 'bg-primary-500 text-white'
+                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                         >
-                            💼 Staff
+                            💼 Staff <span className="opacity-70 ml-1">[{stats.staff}]</span>
                         </button>
 
                         {/* Divider */}
@@ -311,20 +291,6 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {/* Add Person or Location Card */}
-                        <div
-                            onClick={() => setShowAddModal(true)}
-                            className="p-5 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[180px]"
-                        >
-                            <div className="w-14 h-14 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-3">
-                                <svg className="w-8 h-8 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                            </div>
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white text-center">Add Person or Location</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">Click to create</p>
-                        </div>
-
                         {/* Entity Cards */}
                         {filteredEntities.map((entity) => (
                             <EntityCard
@@ -358,6 +324,8 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 onUpdate={onUpdateResident}
                 onDelete={onDeleteResident}
                 tags={tags}
+                onOpenLogModal={onOpenLogModal}
+                onOpenRestockModal={onOpenRestockModal}
             />
 
             {/* Add Person Modal */}
