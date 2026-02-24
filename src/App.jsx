@@ -245,6 +245,7 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                 ) : currentView === 'stock' ? (
                     <ResidentView
                         items={items}
+                        logs={logs}
                         residents={residents}
                         loading={loading}
                         isDemo={!user}

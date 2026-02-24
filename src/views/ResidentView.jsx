@@ -4,11 +4,13 @@ import RestockModal from '../components/RestockModal';
 import ConsumptionModal from '../components/ConsumptionModal';
 import ItemRecordsModal from '../components/ItemRecordsModal';
 import AddItemModal from '../components/AddItemModal';
+import EntityStatsModal from '../components/EntityStatsModal';
 import { useFirestore } from '../hooks/useFirestore';
 import { useInventory } from '../context/InventoryContext';
 
 export default function ResidentView({
     items,
+    logs = [],
     loading,
     isDemo,
     isAdmin,
@@ -44,6 +46,8 @@ export default function ResidentView({
     const [showRecordsModal, setShowRecordsModal] = useState(false);
     const [selectedRecordsItem, setSelectedRecordsItem] = useState(null);
     const [showAddItemModal, setShowAddItemModal] = useState(false);
+    const [showStatsModal, setShowStatsModal] = useState(false);
+    const [selectedStatsItem, setSelectedStatsItem] = useState(null);
 
     const sortDropdownRef = useRef(null);
     const { updateItem } = useFirestore();
@@ -436,6 +440,10 @@ export default function ResidentView({
                             setSelectedRestockItem(item);
                             setShowRestockModal(true);
                         }}
+                        onShowStats={(item) => {
+                            setSelectedStatsItem(item);
+                            setShowStatsModal(true);
+                        }}
                         onAddItem={onAddItem ? () => setShowAddItemModal(true) : null}
                     />
                 )}
@@ -501,6 +509,16 @@ export default function ResidentView({
                     onAddItem={onAddItem}
                 />
             )}
+
+            {/* Item Stats Modal */}
+            <EntityStatsModal
+                isOpen={showStatsModal}
+                onClose={() => { setShowStatsModal(false); setSelectedStatsItem(null); }}
+                entity={selectedStatsItem}
+                entityType="item"
+                logs={logs || []}
+                residents={residents}
+            />
         </div>
     );
 }

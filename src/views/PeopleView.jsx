@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import EntityCard from '../components/EntityCard';
 import EntityDetailModal from '../components/EntityDetailModal';
+import EntityStatsModal from '../components/EntityStatsModal';
 import AddPersonModal from '../components/AddPersonModal';
 import StatusBadge from '../components/StatusBadge';
 import MoveOutModal from '../components/MoveOutModal';
@@ -11,6 +12,8 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
     const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'moved_out', 'all_statuses'
     const [selectedEntity, setSelectedEntity] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showStatsModal, setShowStatsModal] = useState(false);
+    const [statsEntity, setStatsEntity] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showMoveOutModal, setShowMoveOutModal] = useState(false);
     const [moveOutEntity, setMoveOutEntity] = useState(null);
@@ -312,7 +315,16 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 )}
             </div>
 
-            {/* Detail Modal */}
+            {/* Entity Stats Modal */}
+            <EntityStatsModal
+                isOpen={showStatsModal}
+                onClose={() => { setShowStatsModal(false); setStatsEntity(null); }}
+                entity={statsEntity}
+                entityType="person"
+                logs={logs}
+            />
+
+            {/* Detail Modal (Edit) */}
             <EntityDetailModal
                 isOpen={showDetailModal}
                 onClose={() => {
