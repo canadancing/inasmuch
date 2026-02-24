@@ -449,7 +449,8 @@ export default function ResidentView({
                         setShowRestockModal(false);
                         setSelectedRestockItem(null);
                     }}
-                    items={[selectedRestockItem]}
+                    items={items}
+                    initialItems={[selectedRestockItem]}
                     residents={residents}
                     onRestock={onRestock}
                     setCurrentView={setCurrentView}

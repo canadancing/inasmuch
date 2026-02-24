@@ -33,7 +33,9 @@ export function useFirestore(user) {
     const permissions = inventory.permissions;
 
     const [items, setItems] = useState([]);
+    const [archivedItems, setArchivedItems] = useState([]);
     const [residents, setResidents] = useState([]);
+    const [archivedResidents, setArchivedResidents] = useState([]);
     const [logs, setLogs] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
     const [users, setUsers] = useState([]);
@@ -52,6 +54,11 @@ export function useFirestore(user) {
                 ...doc.data()
             }));
             setUsers(usersList);
+        }, (error) => {
+            if (error.code !== 'permission-denied') {
+                console.error('Users listener error:', error);
+            }
+            setUsers([]);
         });
 
         return () => unsubscribe();
@@ -97,7 +104,8 @@ export function useFirestore(user) {
                 id: doc.id,
                 ...doc.data()
             }));
-            setItems(itemsList);
+            setItems(itemsList.filter(item => !item.deleted));
+            setArchivedItems(itemsList.filter(item => item.deleted));
             setLoading(false);
         }, (err) => {
             console.error('Error fetching items:', err);
@@ -120,7 +128,9 @@ export function useFirestore(user) {
                 id: doc.id,
                 ...doc.data()
             }));
-            setResidents(residentsList);
+            // Archived = soft-deleted OR moved out
+            setResidents(residentsList.filter(r => !r.deleted && r.status !== 'moved_out'));
+            setArchivedResidents(residentsList.filter(r => r.deleted || r.status === 'moved_out'));
         });
 
         return () => unsubscribe();
@@ -157,6 +167,11 @@ export function useFirestore(user) {
                 ...doc.data()
             }));
             setAuditLogs(auditList);
+        }, (error) => {
+            if (error.code !== 'permission-denied') {
+                console.error('Audit logs listener error:', error);
+            }
+            setAuditLogs([]);
         });
 
         return () => unsubscribe();
@@ -322,6 +337,28 @@ export function useFirestore(user) {
         });
     };
 
+    // Restore mapped item (Admin only)
+    const restoreItem = async (itemId) => {
+        if (!permissions?.canEdit) {
+            console.warn('Permission denied');
+            return;
+        }
+
+        const itemDocRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
+        await updateDoc(itemDocRef, {
+            deleted: false,
+            deletedAt: null
+        });
+
+        const item = archivedItems.find(i => i.id === itemId);
+        const itemName = item?.name || 'Item';
+
+        await addAuditEntry('restored-item', {
+            itemId,
+            itemName
+        });
+    };
+
     // Add resident (with permission check)
     const addResident = async (residentData) => {
         if (!permissions?.canEdit) {
@@ -379,14 +416,43 @@ export function useFirestore(user) {
         const res = residents.find(r => r.id === residentId);
         const resName = res ? `${res.firstName} ${res.lastName}`.trim() : 'Resident';
         const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
-        await deleteDoc(residentDocRef);
+
+        // Soft delete: mark as deleted instead of removing
+        await updateDoc(residentDocRef, {
+            deleted: true,
+            deletedAt: new Date()
+        });
 
         // Log this action in Audit Trail
         await addAuditEntry('resident-removed', {
             residentId,
-            residentName
+            residentName: resName
         });
     };
+
+    // Restore resident from archive
+    const restoreResident = async (residentId) => {
+        if (!permissions?.canEdit) {
+            console.warn('Permission denied');
+            return;
+        }
+
+        const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
+        await updateDoc(residentDocRef, {
+            deleted: false,
+            deletedAt: null,
+            status: 'active'     // ← also clear the 'moved_out' status
+        });
+
+        const res = archivedResidents.find(r => r.id === residentId);
+        const resName = res ? `${res.firstName || ''} ${res.lastName || ''}`.trim() : (res?.displayName || 'Resident');
+
+        await addAuditEntry('restored-resident', {
+            residentId,
+            residentName: resName
+        });
+    };
+
 
     // Update log (Usage History only - but Audit the edit)
     const updateLog = async (logId, updates) => {
@@ -579,23 +645,26 @@ export function useFirestore(user) {
 
     return {
         items,
+        archivedItems,
         residents,
+        archivedResidents,
         logs,
         auditLogs,
+        users,
         loading,
         error,
-        isDemo,
-        addLog,
-        updateLog,
-        deleteLog,
         addItem,
         updateItem,
         deleteItem,
+        restoreItem,
         addResident,
         updateResident,
         deleteResident,
+        restoreResident,
+        addLog,
+        updateLog,
+        deleteLog,
         restockItem,
-        updateUserRole,
-        users
+        updateUserRole
     };
 }

@@ -26,15 +26,19 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
 
     const {
         items,
+        archivedItems,
         residents,
+        archivedResidents,
         logs,
         auditLogs,
         addItem,
         updateItem,
         deleteItem,
+        restoreItem,
         addResident,
         updateResident,
         deleteResident,
+        restoreResident,
         addLog,
         updateLog,
         deleteLog,
@@ -262,14 +266,22 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                 ) : currentView === 'admin' ? (
                     <AdminView
                         residents={residents}
+                        archivedResidents={archivedResidents}
                         items={items}
+                        archivedItems={archivedItems}
                         logs={logs}
                         auditLogs={auditLogs}
                         users={users}
                         onAddItem={addItem}
                         onUpdateItem={updateItem}
                         onDeleteItem={deleteItem}
-                        onRestock={restockItem}
+                        onRestoreItem={restoreItem}
+                        onRestoreResident={restoreResident}
+                        onRestock={(item) => {
+                            setSelectedPersonForRestock(null);
+                            setSelectedItemsForRestock([item]);
+                            setShowRestockModal(true);
+                        }}
                         // Resident props
                         onAddResident={addResident}
                         onUpdateResident={updateResident}

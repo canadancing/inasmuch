@@ -57,6 +57,9 @@ export default function RestockModal({ isOpen, onClose, items, onRestock, user, 
                 const preselected = initialItems.map(item => ({ item, quantity: 1 }));
                 setSelectedItems(preselected);
             }
+        } else if (!isOpen) {
+            setSelectedItems([]);
+            setItemSearch('');
         }
     }, [isOpen, initialItems]);
 

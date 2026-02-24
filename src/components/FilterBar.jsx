@@ -123,7 +123,7 @@ export default function FilterBar({
     };
 
     return (
-        <div className="card p-4 space-y-3 relative z-10">
+        <div className="card p-4 space-y-3 relative z-50">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
