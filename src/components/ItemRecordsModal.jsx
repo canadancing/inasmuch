@@ -108,6 +108,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             minStock: item.minStock || 0,
             maxStock: item.maxStock || 0,
             unit: item.unit || 'units',
+            isReusable: item.isReusable || false,
             tags: item.tags || [],
             notes: item.notes || ''
         });
@@ -150,6 +151,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             minStock: 0,
             maxStock: 0,
             unit: '',
+            isReusable: false,
             tags: [],
             notes: ''
         });
@@ -167,6 +169,7 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                 formData.minStock !== (item.minStock || 0) ||
                 formData.maxStock !== (item.maxStock || 0) ||
                 formData.unit !== (item.unit || 'units') ||
+                formData.isReusable !== (item.isReusable || false) ||
                 JSON.stringify(formData.tags) !== JSON.stringify(item.tags || []) ||
                 formData.notes !== (item.notes || '');
 
@@ -590,6 +593,29 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                     className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                                     placeholder="e.g., units, rolls, bottles"
                                 />
+                            </div>
+
+                            {/* Is Reusable Toggle */}
+                            <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <div className="flex-1">
+                                    <label className="text-sm font-bold text-gray-900 dark:text-white block mb-1">
+                                        Is this item reusable?
+                                    </label>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                        E.g., Quilts, Tools, or Equipment that can be returned after use.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange('isReusable', !formData.isReusable)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${formData.isReusable ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'
+                                        }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.isReusable ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                    />
+                                </button>
                             </div>
 
                             {/* Tags */}
