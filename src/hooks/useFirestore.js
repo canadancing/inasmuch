@@ -38,6 +38,7 @@ export function useFirestore(user) {
     const [archivedResidents, setArchivedResidents] = useState([]);
     const [logs, setLogs] = useState([]);
     const [auditLogs, setAuditLogs] = useState([]);
+    const [standards, setStandards] = useState([]);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -154,6 +155,23 @@ export function useFirestore(user) {
         return () => unsubscribe();
     }, [currentInventoryId]);
 
+    // Fetch standards from current inventory
+    useEffect(() => {
+        if (!currentInventoryId) return;
+
+        const stdRef = collection(db, 'inventories', currentInventoryId, 'standards');
+
+        const unsubscribe = onSnapshot(stdRef, (snapshot) => {
+            const stdList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setStandards(stdList);
+        });
+
+        return () => unsubscribe();
+    }, [currentInventoryId]);
+
     // Fetch audit logs (Immutable Trail)
     useEffect(() => {
         if (!currentInventoryId) return;
@@ -208,7 +226,7 @@ export function useFirestore(user) {
         if (item) {
             if (action === 'used') {
                 newStock = Math.max(0, item.currentStock - parseInt(qty));
-            } else if (action === 'restocked') {
+            } else if (action === 'restocked' || action === 'returned') {
                 newStock = item.currentStock + parseInt(qty);
             }
         }
@@ -260,7 +278,7 @@ export function useFirestore(user) {
     };
 
     // Add item (with permission check)
-    const addItem = async (name, icon) => {
+    const addItem = async (name, icon, isReusable = false) => {
         if (!permissions?.canEdit) {
             console.warn('Permission denied');
             return;
@@ -270,6 +288,7 @@ export function useFirestore(user) {
         const docRef = await addDoc(itemsRef, {
             name,
             icon,
+            isReusable,
             currentStock: 0,
             minStock: 0,
             createdAt: serverTimestamp(),
@@ -390,19 +409,32 @@ export function useFirestore(user) {
             return;
         }
 
-        const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', residentId);
+        // Handle virtual room updates (which are actually updates to a Person document)
+        let actualResidentId = residentId;
+        const cleanUpdates = { ...updates };
+
+        if (cleanUpdates.entityType === 'virtual-room') {
+            delete cleanUpdates.entityType; // Don't write 'virtual-room' to the database
+
+            // Extract the real person ID from the virtual room ID format
+            if (actualResidentId.startsWith('virtual-room-')) {
+                actualResidentId = actualResidentId.replace('virtual-room-', '');
+            }
+        }
+
+        const residentDocRef = doc(db, 'inventories', currentInventoryId, 'residents', actualResidentId);
         await updateDoc(residentDocRef, {
-            ...updates,
+            ...cleanUpdates,
             updatedAt: serverTimestamp(),
             updatedBy: user?.uid
         });
 
         // Log this action in Audit Trail
-        const resName = updates.firstName ? `${updates.firstName} ${updates.lastName || ''}`.trim() : (residents.find(r => r.id === residentId)?.firstName || 'Resident');
+        const resName = cleanUpdates.firstName ? `${cleanUpdates.firstName} ${cleanUpdates.lastName || ''}`.trim() : (residents.find(r => r.id === actualResidentId)?.firstName || 'Resident');
         await addAuditEntry('resident-updated', {
-            residentId,
+            residentId: actualResidentId,
             residentName: resName,
-            updates: Object.keys(updates)
+            updates: Object.keys(cleanUpdates)
         });
     };
 
@@ -483,7 +515,7 @@ export function useFirestore(user) {
             const log = itemLogs[i];
             if (log.action === 'used' || log.action === 'consume') {
                 stockBeforeEdit = Math.max(0, stockBeforeEdit - (log.quantity || 0));
-            } else if (log.action === 'restocked' || log.action === 'restock') {
+            } else if (log.action === 'restocked' || log.action === 'restock' || log.action === 'returned') {
                 stockBeforeEdit += (log.quantity || 0);
             }
         }
@@ -495,7 +527,7 @@ export function useFirestore(user) {
         let stockAfterEdit = stockBeforeEdit;
         if (newAction === 'used' || newAction === 'consume') {
             stockAfterEdit = Math.max(0, stockAfterEdit - newQty);
-        } else if (newAction === 'restocked' || newAction === 'restock') {
+        } else if (newAction === 'restocked' || newAction === 'restock' || newAction === 'returned') {
             stockAfterEdit += newQty;
         }
 
@@ -507,7 +539,7 @@ export function useFirestore(user) {
             const log = itemLogs[i];
             if (log.action === 'used' || log.action === 'consume') {
                 runningStock = Math.max(0, runningStock - (log.quantity || 0));
-            } else if (log.action === 'restocked' || log.action === 'restock') {
+            } else if (log.action === 'restocked' || log.action === 'restock' || log.action === 'returned') {
                 runningStock += (log.quantity || 0);
             }
 
@@ -606,7 +638,7 @@ export function useFirestore(user) {
                 if (logEntry.action === 'used' || logEntry.action === 'consume') {
                     // Original action reduced stock, so add it back
                     newStock = currentStock + logEntry.quantity;
-                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock') {
+                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock' || logEntry.action === 'returned') {
                     // Original action increased stock, so subtract it
                     newStock = currentStock - logEntry.quantity;
                 }
@@ -643,6 +675,24 @@ export function useFirestore(user) {
         await addLog(resId, resName, itemId, itemName, 'restocked', quantity, date);
     };
 
+    // Standards CRUD
+    const addStandard = async (standardData) => {
+        if (!permissions?.canEdit) return;
+        const ref = collection(db, 'inventories', currentInventoryId, 'standards');
+        const docRef = await addDoc(ref, standardData);
+        await addAuditEntry('standard-added', {
+            standardId: docRef.id,
+            ...standardData
+        });
+    };
+
+    const deleteStandard = async (standardId) => {
+        if (!permissions?.canEdit) return;
+        const ref = doc(db, 'inventories', currentInventoryId, 'standards', standardId);
+        await deleteDoc(ref);
+        await addAuditEntry('standard-deleted', { standardId });
+    };
+
     return {
         items,
         archivedItems,
@@ -665,6 +715,9 @@ export function useFirestore(user) {
         updateLog,
         deleteLog,
         restockItem,
-        updateUserRole
+        updateUserRole,
+        standards,
+        addStandard,
+        deleteStandard
     };
 }

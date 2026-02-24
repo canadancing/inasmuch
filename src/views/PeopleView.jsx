@@ -8,7 +8,7 @@ import MoveOutModal from '../components/MoveOutModal';
 
 export default function PeopleView({ residents = [], logs = [], onAddResident, onUpdateResident, onDeleteResident, tags = [], onOpenLogModal, onOpenRestockModal }) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'residents', 'guests', 'staff', 'locations'
+    const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'residents', 'guests', 'staff'
     const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'moved_out', 'all_statuses'
     const [selectedEntity, setSelectedEntity] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -64,9 +64,9 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
             // Use primaryRole from entity data, with fallback detection
             let primaryRole = resident.primaryRole;
             if (!primaryRole) {
-                // Fallback: detect from entityType and tags
+                // If it's explicitly a location, it shouldn't be here, but just in case:
                 if (resident.entityType === 'location') {
-                    primaryRole = 'common'; // Default for locations
+                    primaryRole = 'location';
                 } else {
                     // For people, check tags
                     const residentTags = Array.isArray(resident.tags) ? resident.tags : [];
@@ -91,9 +91,21 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
     }, [residents, logs]);
 
 
-    // Filter entities
     const filteredEntities = useMemo(() => {
-        return entities.filter(entity => {
+        // Strictly exclude any entities marked as locations or with location roles
+        const personEntities = entities.filter(e => {
+            if (e.entityType === 'location') return false;
+            if (['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(e.primaryRole)) return false;
+
+            // Fallback for legacy data: exclude entities with 'room', 'kitchen', 'bathroom' in their name
+            const lowerName = (e.name || '').toLowerCase();
+            const locationKeywords = ['room', 'kitchen', 'bathroom', 'garage', 'corridor', 'patio'];
+            if (locationKeywords.some(kw => lowerName.includes(kw))) return false;
+
+            return true;
+        });
+
+        return personEntities.filter(entity => {
             const matchesSearch = entity.name.toLowerCase().includes(searchQuery.toLowerCase());
 
             // Role-based filtering
@@ -105,8 +117,6 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                     matchesRole = entity.primaryRole === 'guest' || entity.primaryRole === 'temporary';
                 } else if (roleFilter === 'staff') {
                     matchesRole = entity.primaryRole === 'staff' || entity.primaryRole === 'donor' || entity.primaryRole === 'volunteer';
-                } else if (roleFilter === 'locations') {
-                    matchesRole = ['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(entity.primaryRole);
                 }
             }
 
@@ -122,13 +132,24 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
 
     // Stats overview
     const stats = useMemo(() => {
+        const personEntities = entities.filter(e => {
+            if (e.entityType === 'location') return false;
+            if (['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(e.primaryRole)) return false;
+
+            // Fallback for legacy data
+            const lowerName = (e.name || '').toLowerCase();
+            const locationKeywords = ['room', 'kitchen', 'bathroom', 'garage', 'corridor', 'patio'];
+            if (locationKeywords.some(kw => lowerName.includes(kw))) return false;
+
+            return true;
+        });
+
         return {
-            total: entities.length,
-            residents: entities.filter(e => ['resident', 'temporary'].includes(e.primaryRole)).length,
-            guests: entities.filter(e => e.primaryRole === 'guest').length,
-            locations: entities.filter(e => ['common', 'kitchen', 'bathroom', 'bedroom', 'garage', 'utility', 'outdoor'].includes(e.primaryRole)).length,
-            staff: entities.filter(e => ['staff', 'donor', 'volunteer'].includes(e.primaryRole)).length,
-            mostActive: [...entities].sort((a, b) => b.totalUses - a.totalUses)[0]
+            total: personEntities.length,
+            residents: personEntities.filter(e => ['resident', 'temporary'].includes(e.primaryRole)).length,
+            guests: personEntities.filter(e => e.primaryRole === 'guest').length,
+            staff: personEntities.filter(e => ['staff', 'donor', 'volunteer'].includes(e.primaryRole)).length,
+            mostActive: [...personEntities].sort((a, b) => b.totalUses - a.totalUses)[0]
         };
     }, [entities]);
 
@@ -161,7 +182,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                             PEOPLE
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">
-                            View consumption by residents, common areas, and staff
+                            View consumption history and profiles of residents, guests, and staff
                         </p>
                     </div>
                 </div>
@@ -173,7 +194,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                         <div className="relative flex-1">
                             <input
                                 type="text"
-                                placeholder="Search people and locations..."
+                                placeholder="Search people..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full px-4 py-3 pl-11 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-colors"
@@ -191,7 +212,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
-                            Add Person or Location
+                            Add Person
                         </button>
                     </div>
 
@@ -224,15 +245,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                         >
                             🎒 Guests <span className="opacity-70 ml-1">[{stats.guests}]</span>
                         </button>
-                        <button
-                            onClick={() => setRoleFilter('locations')}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'locations'
-                                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                }`}
-                        >
-                            📍 Locations <span className="opacity-70 ml-1">[{stats.locations}]</span>
-                        </button>
+
                         <button
                             onClick={() => setRoleFilter('staff')}
                             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${roleFilter === 'staff'
@@ -275,7 +288,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                             {searchQuery ? '🔍' : '👥'}
                         </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                            {searchQuery ? 'No results found' : 'No people or locations yet'}
+                            {searchQuery ? 'No results found' : 'No people yet'}
                         </p>
                         <p className="text-gray-500 dark:text-gray-400 mb-6">
                             {searchQuery ? 'Try a different search term' : 'Add people from the Admin page'}
@@ -288,7 +301,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 </svg>
-                                Add Person or Location
+                                Add Person
                             </button>
                         )}
                     </div>
@@ -346,6 +359,7 @@ export default function PeopleView({ residents = [], logs = [], onAddResident, o
                 onClose={() => setShowAddModal(false)}
                 onAdd={onAddResident}
                 tags={tags}
+                presetType="person"
             />
 
             {/* Move Out Modal */}

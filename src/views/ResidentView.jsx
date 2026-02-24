@@ -359,7 +359,7 @@ export default function ResidentView({
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                     <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Current Inventory
+                        Storage Inventory
                     </h2>
 
                     <div className="flex items-center gap-3 w-full sm:w-auto">

@@ -106,6 +106,20 @@ service cloud.firestore {
       }
       
       // ============================================
+      // STANDARDS SUBCOLLECTION
+      // ============================================
+      
+      match /standards/{standardId} {
+        // Can read if: have view access to inventory
+        allow read: if hasViewAccess(inventoryId);
+        
+        // Can create/update if: have edit access
+        allow create: if hasEditAccess(inventoryId);
+        allow update: if hasEditAccess(inventoryId);
+        
+        // Can delete if: owner only
+        allow delete: if isOwner(inventoryId);
+      }
       // LOGS SUBCOLLECTION
       // ============================================
       

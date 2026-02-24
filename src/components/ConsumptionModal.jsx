@@ -261,9 +261,9 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <span>➖</span> Log Consumption
+                                <span>➖</span> Log Usage
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track what's been used</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track what's been used or assigned</p>
                         </div>
                         <button
                             onClick={onClose}
@@ -280,7 +280,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                     <div className="relative" ref={personDropdownRef}>
                         <div className="flex items-center justify-between mb-2">
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                                WHO USED THE ITEM?
+                                WHO USED / RECEIVED THE ITEM?
                             </label>
                             <button
                                 onClick={() => setShowAddPersonModal(true)}
@@ -532,7 +532,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                     {selectedItems.length > 0 && (
                         <div>
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                                Items Being Consumed
+                                Items Being Logged
                             </label>
                             <div className="space-y-2">
                                 {selectedItems.map(({ item, quantity }) => (
@@ -595,7 +595,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                     {/* Date Selection */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                            Consumption Date
+                            Date
                         </label>
                         <input
                             type="date"

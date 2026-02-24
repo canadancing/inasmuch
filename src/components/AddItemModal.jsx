@@ -4,7 +4,8 @@ import { ITEM_ICON_CATEGORIES, DEFAULT_ICON, suggestIcons } from '../constants/i
 export default function AddItemModal({ isOpen, onClose, onAddItem }) {
     const [itemName, setItemName] = useState('');
     const [itemIcon, setItemIcon] = useState(DEFAULT_ICON);
-    const [activeCategory, setActiveCategory] = useState('bathroom');
+    const [activeCategory, setActiveCategory] = useState('storage');
+    const [isReusable, setIsReusable] = useState(false);
 
     // Get smart suggestions based on item name
     const suggestions = useMemo(() => {
@@ -14,10 +15,11 @@ export default function AddItemModal({ isOpen, onClose, onAddItem }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (itemName.trim()) {
-            onAddItem(itemName.trim(), itemIcon);
+            onAddItem(itemName.trim(), itemIcon, isReusable);
             setItemName('');
             setItemIcon(DEFAULT_ICON);
-            setActiveCategory('bathroom');
+            setActiveCategory('storage');
+            setIsReusable(false);
             onClose();
         }
     };
@@ -89,8 +91,8 @@ export default function AddItemModal({ isOpen, onClose, onAddItem }) {
                                             type="button"
                                             onClick={() => setItemIcon(emoji)}
                                             className={`text-3xl p-2 rounded-lg hover:bg-white dark:hover:bg-primary-800 transition-all ${itemIcon === emoji
-                                                    ? 'bg-white dark:bg-primary-800 ring-2 ring-primary-500 scale-110'
-                                                    : ''
+                                                ? 'bg-white dark:bg-primary-800 ring-2 ring-primary-500 scale-110'
+                                                : ''
                                                 }`}
                                             title="Suggested icon"
                                         >
@@ -109,8 +111,8 @@ export default function AddItemModal({ isOpen, onClose, onAddItem }) {
                                     type="button"
                                     onClick={() => setActiveCategory(key)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${activeCategory === key
-                                            ? 'bg-primary-500 text-white'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     {category.label}
@@ -126,14 +128,37 @@ export default function AddItemModal({ isOpen, onClose, onAddItem }) {
                                     type="button"
                                     onClick={() => setItemIcon(emoji)}
                                     className={`text-2xl p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors ${itemIcon === emoji
-                                            ? 'bg-white dark:bg-gray-700 ring-2 ring-primary-500'
-                                            : ''
+                                        ? 'bg-white dark:bg-gray-700 ring-2 ring-primary-500'
+                                        : ''
                                         }`}
                                 >
                                     {emoji}
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Is Reusable Toggle */}
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                        <div className="flex-1">
+                            <label className="text-sm font-bold text-gray-900 dark:text-white block mb-1">
+                                Is this item reusable?
+                            </label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                E.g., Quilts, Tools, or Equipment that can be returned after use.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsReusable(!isReusable)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${isReusable ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'
+                                }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isReusable ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
                     </div>
 
                     {/* Actions */}

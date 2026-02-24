@@ -5,6 +5,13 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
             <span className={`text-base font-black text-center leading-tight tracking-tight transition-colors duration-300 ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>
                 {item.name}
             </span>
+            {item.isReusable && (
+                <div className="absolute top-2 right-2 flex items-center justify-center p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" title="Reusable Item">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </div>
+            )}
             <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-xl transition-all duration-300 ${item.currentStock <= 2
                 ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-100 dark:border-red-900/50'
                 : item.currentStock <= 5

@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import RoleBadge from './RoleBadge';
 
-export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
-    const [step, setStep] = useState(1); // 1 = choose type, 2 = choose role, 3 = fill form
-    const [entityType, setEntityType] = useState('person'); // 'person' or 'location'
+export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [], presetType = null }) {
+    const [step, setStep] = useState(presetType ? 2 : 1); // 1 = choose type, 2 = choose role, 3 = fill form
+    const [entityType, setEntityType] = useState(presetType || 'person'); // 'person' or 'location'
     const [primaryRole, setPrimaryRole] = useState(''); // resident, guest, temporary, staff, donor, common, etc.
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         phone: '',
         room: '',
+        bedSize: 'Twin',
         displayName: '',
         locationId: '',
         expectedDepartureDate: '',
@@ -84,6 +85,7 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
             entityData.lastName = formData.lastName.trim();
             entityData.phone = formData.phone.trim();
             entityData.room = formData.room.trim();
+            entityData.bedSize = formData.bedSize;
 
             // Add expected departure for temporary residents/guests
             if ((primaryRole === 'guest' || primaryRole === 'temporary') && formData.expectedDepartureDate) {
@@ -93,6 +95,7 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
             // Location: use displayName, clear firstName/lastName
             entityData.displayName = formData.displayName.trim();
             entityData.room = formData.locationId.trim(); // Use room field for locationId (backward compat)
+            entityData.bedSize = formData.bedSize;
             entityData.firstName = '';
             entityData.lastName = '';
         }
@@ -102,14 +105,15 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
     };
 
     const handleClose = () => {
-        setStep(1);
-        setEntityType('person');
+        setStep(presetType ? 2 : 1);
+        setEntityType(presetType || 'person');
         setPrimaryRole('');
         setFormData({
             firstName: '',
             lastName: '',
             phone: '',
             room: '',
+            bedSize: 'Twin',
             displayName: '',
             locationId: '',
             expectedDepartureDate: '',
@@ -140,15 +144,29 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-black text-gray-900 dark:text-white">
                             {step === 1 ? 'Add Person or Location' :
-                                step === 2 ? `Choose ${entityType === 'person' ? 'Role' : 'Category'}` :
+                                step === 2 ? `Choose ${entityType === 'person' ? 'Role' : 'Location Type'}` :
                                     entityType === 'person' ? 'Add Person' : 'Add Location'}
                         </h2>
                         <button
-                            onClick={handleClose}
+                            onClick={() => {
+                                if (step === 3) {
+                                    setStep(presetType ? 2 : 1); // Go back instead of close
+                                } else if (step === 2 && !presetType) {
+                                    setStep(1);
+                                } else {
+                                    handleClose();
+                                }
+                            }}
                             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                             <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                {((step === 3 && presetType) || (step > 1 && !presetType)) ? (
+                                    // Back arrow icon
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                ) : (
+                                    // Close X icon
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                )}
                             </svg>
                         </button>
                     </div>
@@ -285,6 +303,25 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
                                         </div>
                                     </div>
 
+                                    {/* Bed Size for Residents in Rooms */}
+                                    {formData.room.trim() !== '' && (
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                🛏️ Bed Size
+                                            </label>
+                                            <select
+                                                value={formData.bedSize}
+                                                onChange={(e) => handleChange('bedSize', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            >
+                                                <option value="Twin">Twin / Single</option>
+                                                <option value="Double">Double / Full</option>
+                                                <option value="Queen">Queen</option>
+                                                <option value="King">King</option>
+                                            </select>
+                                        </div>
+                                    )}
+
                                     {/* Expected Departure for Temporary/Guest */}
                                     {isTemporary && (
                                         <div>
@@ -335,6 +372,25 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
                                             Auto-generated from location name
                                         </p>
                                     </div>
+
+                                    {/* Bed Size for Bedroom locations */}
+                                    {primaryRole === 'bedroom' && (
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                🛏️ Bed Size
+                                            </label>
+                                            <select
+                                                value={formData.bedSize}
+                                                onChange={(e) => handleChange('bedSize', e.target.value)}
+                                                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                                            >
+                                                <option value="Twin">Twin / Single</option>
+                                                <option value="Double">Double / Full</option>
+                                                <option value="Queen">Queen</option>
+                                                <option value="King">King</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </>
                             )}
 
@@ -406,6 +462,6 @@ export default function AddPersonModal({ isOpen, onClose, onAdd, tags = [] }) {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

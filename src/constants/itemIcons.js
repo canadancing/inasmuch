@@ -66,8 +66,8 @@ export const ITEM_ICON_CATEGORIES = {
             { emoji: '🪣', keywords: ['bucket', 'pail', 'mop'] },
         ]
     },
-    general: {
-        label: '📦 General',
+    storage: {
+        label: '📦 Storage',
         icons: [
             { emoji: '📦', keywords: ['box', 'package', 'misc', 'general', 'item'] },
             { emoji: '💡', keywords: ['light', 'bulb', 'lamp', 'lighting'] },

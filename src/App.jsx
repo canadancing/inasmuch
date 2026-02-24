@@ -13,6 +13,7 @@ import ResidentView from './views/ResidentView';
 import AdminView from './views/AdminView';
 import AccountView from './views/AccountView';
 import PeopleView from './views/PeopleView';
+import RoomsView from './views/RoomsView';
 import AccessRequestModal from './components/AccessRequestModal';
 import ConsumptionModal from './components/ConsumptionModal';
 import RestockModal from './components/RestockModal';
@@ -44,7 +45,10 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
         deleteLog,
         restockItem,
         updateUserRole,
-        users
+        users,
+        standards,
+        addStandard,
+        deleteStandard
     } = useFirestore(user);
 
     const {
@@ -133,6 +137,12 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                     </svg>
                 );
+            case 'rooms':
+                return (
+                    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.592 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                    </svg>
+                );
             default:
                 return null;
         }
@@ -141,7 +151,8 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
     // Build nav items - add super admin only for authorized users
     const baseNavItems = [
         { id: 'people', label: 'PEOPLE' },
-        { id: 'stock', label: 'STOCK' },
+        { id: 'rooms', label: 'ROOMS' },
+        { id: 'stock', label: 'STORAGE' },
         { id: 'admin', label: 'ADMIN' },
         { id: 'account', label: 'ACCOUNT' },
     ];
@@ -241,6 +252,22 @@ export default function App({ user, loading, loginWithGoogle, loginWithEmail, re
                             setSelectedItemsForRestock(getTopItemsForPerson(person.id, 'restocked'));
                             setShowRestockModal(true);
                         }}
+                    />
+                ) : currentView === 'rooms' ? (
+                    <RoomsView
+                        residents={residents}
+                        items={items}
+                        logs={logs}
+                        onAddResident={addResident}
+                        onUpdateResident={updateResident}
+                        onDeleteResident={deleteResident}
+                        tags={tags}
+                        onUpdateItem={updateItem}
+                        onLog={addLog}
+                        standards={standards}
+                        addStandard={addStandard}
+                        deleteStandard={deleteStandard}
+                        canEdit={!user || inventoryPermissions?.canEdit}
                     />
                 ) : currentView === 'stock' ? (
                     <ResidentView
