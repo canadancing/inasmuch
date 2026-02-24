@@ -2,14 +2,11 @@ import { useState, useMemo } from 'react';
 import StatusBadge from '../components/StatusBadge';
 import RoomDetailModal from '../components/RoomDetailModal';
 import AddPersonModal from '../components/AddPersonModal';
-import StandardsModal from '../components/StandardsModal';
-
 export default function RoomsView({ residents = [], items = [], logs = [], onAddResident, onUpdateResident, onDeleteResident, tags = [], onUpdateItem, onLog, standards = [], addStandard, deleteStandard, canEdit = true }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [showStandardsModal, setShowStandardsModal] = useState(false);
 
     // Filter locations & auto-generate bedrooms
     const rooms = useMemo(() => {
@@ -146,12 +143,6 @@ export default function RoomsView({ residents = [], items = [], logs = [], onAdd
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => setShowStandardsModal(true)}
-                            className="px-6 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap"
-                        >
-                            <span>📋</span> Standards
-                        </button>
-                        <button
                             onClick={() => setShowAddModal(true)}
                             className="px-6 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 shadow-lg shadow-primary-500/20 active:scale-95 transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap"
                         >
@@ -226,7 +217,7 @@ export default function RoomsView({ residents = [], items = [], logs = [], onAdd
                 canEdit={canEdit}
                 onEditStandards={() => {
                     setShowDetailModal(false);
-                    setShowStandardsModal(true);
+                    // setShowStandardsModal(true); // This line is commented out as StandardsModal is removed
                 }}
             />
 
@@ -237,16 +228,6 @@ export default function RoomsView({ residents = [], items = [], logs = [], onAdd
                 tags={tags}
                 presetType="location"
             />
-
-            <StandardsModal
-                isOpen={showStandardsModal}
-                onClose={() => setShowStandardsModal(false)}
-                standards={standards}
-                items={items}
-                onAdd={addStandard}
-                onDelete={deleteStandard}
-            />
         </div>
     );
 }
-
