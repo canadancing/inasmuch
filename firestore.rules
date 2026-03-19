@@ -130,9 +130,9 @@ service cloud.firestore {
         // Can create if: have edit access
         allow create: if hasEditAccess(inventoryId);
         
-        // Can update/delete if: owner only
-        allow update: if isOwner(inventoryId);
-        allow delete: if isOwner(inventoryId);
+        // Can update/delete if: have edit access (to allow undoing/editing usage)
+        allow update: if hasEditAccess(inventoryId);
+        allow delete: if hasEditAccess(inventoryId);
       }
       
       // ============================================

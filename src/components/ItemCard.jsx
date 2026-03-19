@@ -1,4 +1,18 @@
-export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, onHideItem, onConsume, onShowRecords, onRestock, onShowStats }) {
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+export default function ItemCard({ item, isSelected, onSelect, showStockOnly = false, isSortable = false }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: item.id,
+        disabled: !isSortable
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+    };
+
     const content = (
         <>
             <div className={`text-5xl transition-transform duration-500 ${isSelected ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>{item.icon}</div>
@@ -9,6 +23,13 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
                 <div className="absolute top-2 right-2 flex items-center justify-center p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" title="Reusable Item">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                </div>
+            )}
+            {item.isPinned && (
+                <div className="absolute top-2 left-2 flex items-center justify-center p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" title="Pinned Item">
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                     </svg>
                 </div>
             )}
@@ -23,101 +44,27 @@ export default function ItemCard({ item, isSelected, onSelect, showStockOnly = f
         </>
     );
 
-    // Calculate notification badge count (e.g., items below min stock)
-    const badgeCount = item.currentStock > 0 && item.currentStock <= item.minStock ? 1 : 0;
-
     if (showStockOnly) {
         return (
-            <div className="relative group">
+            <div ref={setNodeRef} style={style} className={`relative group ${isDragging ? 'opacity-50' : 'opacity-100'}`} {...attributes} {...listeners}>
                 <button
                     onClick={() => onSelect(item)}
                     className="card-interactive p-6 flex flex-col items-center gap-4 w-full transition-all duration-300 group-hover:scale-105"
                 >
                     {content}
                 </button>
-                {/* Consumption (Minus) Button */}
-                {onConsume && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onConsume(item);
-                        }}
-                        className="absolute top-3 left-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-red-600 z-10"
-                        title="Log Consumption"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
-                        </svg>
-                    </button>
-                )}
-                {/* Restock (Plus) Button */}
-                {onRestock && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onRestock(item);
-                        }}
-                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-primary-600 z-10"
-                        title="Restock Item"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                        </svg>
-                    </button>
-                )}
-                {/* Hide Button */}
-                {onHideItem && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onHideItem(item.id);
-                        }}
-                        className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-gray-600 dark:bg-gray-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-gray-700 dark:hover:bg-gray-600 z-10"
-                        title="Hide Item"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                    </button>
-                )}
-                {/* Records Button */}
-                {onShowRecords && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onShowRecords(item);
-                        }}
-                        className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-blue-600 z-10"
-                        title="View Records"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </button>
-                )}
-                {/* Stats Button (Purple, bottom-right when records absent, otherwise inset) */}
-                {onShowStats && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onShowStats(item);
-                        }}
-                        className={`absolute bottom-3 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:bg-purple-600 z-10 ${onShowRecords ? 'right-12' : 'right-3'}`}
-                        title="View Stats"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </button>
-                )}
             </div>
         );
     }
 
     return (
         <button
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
             onClick={() => onSelect(item)}
-            className={`card-interactive p-6 flex flex-col items-center gap-4 transition-all duration-500 ${isSelected
+            className={`card-interactive p-6 flex flex-col items-center gap-4 transition-all duration-500 ${isDragging ? 'opacity-50' : ''} ${isSelected
                 ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 shadow-[0_0_30px_rgba(14,165,233,0.15)] scale-105'
                 : ''
                 }`}

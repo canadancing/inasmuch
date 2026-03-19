@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import AddPersonModal from './AddPersonModal';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export default function LogUsageModal({ isOpen, onClose, residents, items, onLog, user, setCurrentView, onAddResident, tags = [], initialResident = null }) {
     const [selectedResident, setSelectedResident] = useState(initialResident);
     const [selectedItems, setSelectedItems] = useState([]); // Array of {item, quantity}
-    const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+    const [logDate, setLogDate] = useState(getLocalISODate());
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -94,7 +95,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
         try {
             const [year, month, day] = logDate.split('-').map(Number);
             const dateObj = new Date(year, month - 1, day);
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalISODate();
             if (logDate === todayStr) {
                 const now = new Date();
                 dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
@@ -121,7 +122,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
             setNotes('');
             setResidentSearch('');
             setItemSearch('');
-            setLogDate(new Date().toISOString().split('T')[0]);
+            setLogDate(getLocalISODate());
             onClose();
         } catch (error) {
             console.error('Error logging items:', error);
@@ -380,7 +381,7 @@ export default function LogUsageModal({ isOpen, onClose, residents, items, onLog
                             type="date"
                             value={logDate}
                             onChange={(e) => setLogDate(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
+                            max={getLocalISODate()}
                             className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-primary-500 focus:ring-0 transition-colors"
                         />
                     </div>

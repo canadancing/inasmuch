@@ -81,7 +81,7 @@ export function calculatePermissions(inventory, userId) {
         isOwner,
         canView: isOwner || hasEditAccess || hasViewAccess,
         canEdit: isOwner || hasEditAccess,
-        canDelete: isOwner,
+        canDelete: isOwner || hasEditAccess, // Make sure editors can delete logs to fix mistakes
         canManageAccess: isOwner,
         role: isOwner ? 'owner' : (hasEditAccess ? 'edit' : (hasViewAccess ? 'view' : null))
     };

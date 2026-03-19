@@ -9,8 +9,10 @@ import {
     deleteDoc,
     doc,
     getDoc,
+    getDocs,
     serverTimestamp,
     writeBatch,
+    where,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useInventory } from '../context/InventoryContext';
@@ -149,7 +151,7 @@ export function useFirestore(user) {
                 id: doc.id,
                 ...doc.data()
             }));
-            setLogs(logsList);
+            setLogs(logsList.filter(l => !l.deleted));
         });
 
         return () => unsubscribe();
@@ -294,7 +296,9 @@ export function useFirestore(user) {
             createdAt: serverTimestamp(),
             createdBy: user?.uid,
             updatedAt: serverTimestamp(),
-            updatedBy: user?.uid
+            updatedBy: user?.uid,
+            isPinned: false,
+            customOrder: items.length > 0 ? Math.max(...items.map(i => i.customOrder || 0)) + 1 : 0
         });
 
         // Log this action in Audit Trail
@@ -488,66 +492,80 @@ export function useFirestore(user) {
 
     // Update log (Usage History only - but Audit the edit)
     const updateLog = async (logId, updates) => {
-        if (!permissions?.canEdit) return;
+        if (!permissions?.canEdit) {
+            console.error('updateLog returning early: user does not have edit permissions!', permissions);
+            return;
+        }
 
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
-        const logEntry = logs.find(l => l.id === logId);
+        const logSnap = await getDoc(logRef);
 
-        if (!logEntry || !logEntry.itemId) return;
+        if (!logSnap.exists()) {
+            console.error('updateLog returning early: log document not found in Firestore!', logId);
+            return;
+        }
+        
+        const logEntry = { id: logSnap.id, ...logSnap.data() };
+
+        if (!logEntry.itemId) {
+            console.error('updateLog returning early: logEntry has no itemId!', logId);
+            return;
+        }
 
         // TIMELINE RECALCULATION APPROACH
-        // 1. Get all logs for this item, sorted by date
-        const itemLogs = logs
-            .filter(l => l.itemId === logEntry.itemId)
+        // Fetch all logs for this item to properly rebuild the timeline
+        const itemLogsQuery = query(
+            collection(db, 'inventories', currentInventoryId, 'logs'),
+            where('itemId', '==', logEntry.itemId)
+        );
+        const itemLogsSnapshot = await getDocs(itemLogsQuery);
+        
+        const itemLogs = itemLogsSnapshot.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(l => !l.deleted)
             .sort((a, b) => {
-                const dateA = a.date || a.timestamp || new Date(0);
-                const dateB = b.date || b.timestamp || new Date(0);
+                const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
+                const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
                 return dateA - dateB;
             });
 
         // 2. Find the index of the edited log
         const editedIndex = itemLogs.findIndex(l => l.id === logId);
-        if (editedIndex === -1) return;
-
-        // 3. Replay timeline UP TO the edited log to get "before" stock
-        let stockBeforeEdit = 0;
-        for (let i = 0; i < editedIndex; i++) {
-            const log = itemLogs[i];
-            if (log.action === 'used' || log.action === 'consume') {
-                stockBeforeEdit = Math.max(0, stockBeforeEdit - (log.quantity || 0));
-            } else if (log.action === 'restocked' || log.action === 'restock' || log.action === 'returned') {
-                stockBeforeEdit += (log.quantity || 0);
-            }
+        if (editedIndex === -1) {
+            console.error('updateLog returning early: logId not found in itemLogs!', logId);
+            return;
         }
 
-        // 4. Apply the EDITED log with NEW values
-        const newQty = updates.quantity !== undefined ? updates.quantity : logEntry.quantity;
-        const newAction = updates.action !== undefined ? updates.action : logEntry.action;
+        // 3. Calculate the delta (change in effect)
+        const oldQty = logEntry.quantity || 0;
+        const oldAction = logEntry.action;
+        let oldEffect = 0;
+        if (oldAction === 'used' || oldAction === 'consume') oldEffect = -oldQty;
+        else if (oldAction === 'restocked' || oldAction === 'restock' || oldAction === 'returned') oldEffect = oldQty;
+        
+        const newQty = updates.quantity !== undefined ? updates.quantity : oldQty;
+        const newAction = updates.action !== undefined ? updates.action : oldAction;
+        let newEffect = 0;
+        if (newAction === 'used' || newAction === 'consume') newEffect = -newQty;
+        else if (newAction === 'restocked' || newAction === 'restock' || newAction === 'returned') newEffect = newQty;
+        
+        const delta = newEffect - oldEffect;
 
-        let stockAfterEdit = stockBeforeEdit;
-        if (newAction === 'used' || newAction === 'consume') {
-            stockAfterEdit = Math.max(0, stockAfterEdit - newQty);
-        } else if (newAction === 'restocked' || newAction === 'restock' || newAction === 'returned') {
-            stockAfterEdit += newQty;
-        }
-
-        // 5. Recalculate all SUBSEQUENT logs
+        // 4. Apply delta to the edited log and all subsequent logs
+        let stockAfterEdit = Math.max(0, (logEntry.newStock || 0) + delta);
         const logsToUpdate = [];
-        let runningStock = stockAfterEdit;
 
         for (let i = editedIndex + 1; i < itemLogs.length; i++) {
             const log = itemLogs[i];
-            if (log.action === 'used' || log.action === 'consume') {
-                runningStock = Math.max(0, runningStock - (log.quantity || 0));
-            } else if (log.action === 'restocked' || log.action === 'restock' || log.action === 'returned') {
-                runningStock += (log.quantity || 0);
-            }
-
             logsToUpdate.push({
                 id: log.id,
-                newStock: runningStock
+                newStock: Math.max(0, (log.newStock || 0) + delta)
             });
         }
+
+        // Apply delta to the CURRENT item stock
+        const item = items.find(i => i.id === logEntry.itemId);
+        let runningStock = Math.max(0, (item?.currentStock || 0) + delta);
 
         // Handle date field conversion if provided (preprocessing)
         if (updates.date) {
@@ -621,46 +639,109 @@ export function useFirestore(user) {
         if (!permissions?.canDelete) return;
 
         const logRef = doc(db, 'inventories', currentInventoryId, 'logs', logId);
-        const logEntry = logs.find(l => l.id === logId);
+        const logSnap = await getDoc(logRef);
 
-        if (!logEntry) return;
+        if (!logSnap.exists()) {
+            console.error('deleteLog returning early: log document not found in Firestore!', logId);
+            return;
+        }
+        
+        const logEntry = { id: logSnap.id, ...logSnap.data() };
 
-        // Restore stock by reversing the log's action
-        if (logEntry.itemId && logEntry.quantity) {
-            const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
-            const itemSnapshot = await getDoc(itemRef);
-
-            if (itemSnapshot.exists()) {
-                const currentStock = itemSnapshot.data().currentStock || 0;
-                let newStock = currentStock;
-
-                // Reverse the original action
-                if (logEntry.action === 'used' || logEntry.action === 'consume') {
-                    // Original action reduced stock, so add it back
-                    newStock = currentStock + logEntry.quantity;
-                } else if (logEntry.action === 'restocked' || logEntry.action === 'restock' || logEntry.action === 'returned') {
-                    // Original action increased stock, so subtract it
-                    newStock = currentStock - logEntry.quantity;
-                }
-
-                await updateDoc(itemRef, {
-                    currentStock: Math.max(0, newStock),
-                    updatedAt: serverTimestamp(),
-                    updatedBy: user?.uid
-                });
-            }
+        if (!logEntry.itemId) {
+            console.error('deleteLog returning early: logEntry has no itemId!', logId);
+            return;
         }
 
-        // Delete the log
-        await deleteDoc(logRef);
+        // TIMELINE RECALCULATION APPROACH FOR DELETE
+        // Fetch all logs for this item from DB to ensure completeness
+        const itemLogsQuery = query(
+            collection(db, 'inventories', currentInventoryId, 'logs'),
+            where('itemId', '==', logEntry.itemId)
+        );
+        const itemLogsSnapshot = await getDocs(itemLogsQuery);
+        
+        const itemLogs = itemLogsSnapshot.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(l => !l.deleted || l.id === logId) // Keep the deleted one just to find its index
+            .sort((a, b) => {
+                const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
+                const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
+                return dateA - dateB;
+            });
 
+        const editedIndex = itemLogs.findIndex(l => l.id === logId);
+        if (editedIndex === -1) return;
+
+        // Calculate delta (removing the log reverses its effect)
+        const oldQty = logEntry.quantity || 0;
+        const oldAction = logEntry.action;
+        let oldEffect = 0;
+        if (oldAction === 'used' || oldAction === 'consume') oldEffect = -oldQty;
+        else if (oldAction === 'restocked' || oldAction === 'restock' || oldAction === 'returned') oldEffect = oldQty;
+        
+        const delta = -oldEffect;
+
+        // Apply delta to all subsequent logs
+        const logsToUpdate = [];
+        for (let i = editedIndex + 1; i < itemLogs.length; i++) {
+            const log = itemLogs[i];
+            logsToUpdate.push({
+                id: log.id,
+                newStock: Math.max(0, (log.newStock || 0) + delta)
+            });
+        }
+        
+        // The deleted log's newStock is irrelevant, but we keep it consistent visually if restoring later
+        let stockAfterEdit = Math.max(0, (logEntry.newStock || 0) + delta);
+
+        // Apply delta to the CURRENT item stock
+        const item = items.find(i => i.id === logEntry.itemId);
+        let runningStock = Math.max(0, (item?.currentStock || 0) + delta);
+
+        const batch = writeBatch(db);
+
+        // Soft delete the log so we don't hit permission-denied
+        batch.update(logRef, {
+            deleted: true,
+            quantity: 0,
+            newStock: stockAfterEdit, // technically won't be shown, but keep consistent
+            updatedAt: serverTimestamp(),
+            updatedBy: user?.uid
+        });
+
+        // Update all subsequent logs
+        for (const logUpdate of logsToUpdate) {
+            batch.update(
+                doc(db, 'inventories', currentInventoryId, 'logs', logUpdate.id),
+                { newStock: logUpdate.newStock }
+            );
+        }
+
+        // Update item's current stock
+        const itemRef = doc(db, 'inventories', currentInventoryId, 'items', logEntry.itemId);
+        batch.update(itemRef, {
+            currentStock: runningStock,
+            updatedAt: serverTimestamp(),
+            updatedBy: user?.uid
+        });
+
+        try {
+            console.log('Attempting batch.commit() for deleteLog...');
+            await batch.commit();
+            console.log('batch.commit() for deleteLog SUCCEEDED.');
+        } catch (error) {
+            console.error('EXACT ERROR IN BATCH.COMMIT:', error);
+            throw error; // Re-throw so caller knows it failed
+        }
         // Audit the fact that a history entry was DELETED
         await addAuditEntry('usage-log-deleted', {
             logId,
             itemName: logEntry?.itemName || 'Unknown',
             residentName: logEntry?.residentName || 'Unknown',
             quantity: logEntry?.quantity,
-            stockRestored: logEntry.quantity
+            stockRestored: logEntry.quantity,
+            affectedLogsCount: logsToUpdate.length
         });
     };
 
@@ -693,6 +774,32 @@ export function useFirestore(user) {
         await addAuditEntry('standard-deleted', { standardId });
     };
 
+    // Update the custom order of multiple items
+    const updateItemsOrder = async (orderedItemIds) => {
+        if (!permissions?.canEdit || !currentInventoryId) return;
+
+        try {
+            const batch = writeBatch(db);
+            
+            orderedItemIds.forEach((itemId, index) => {
+                const itemRef = doc(db, 'inventories', currentInventoryId, 'items', itemId);
+                const updateData = {
+                    customOrder: index,
+                    updatedAt: serverTimestamp()
+                };
+                if (user?.uid) {
+                    updateData.updatedBy = user.uid;
+                }
+                batch.update(itemRef, updateData);
+            });
+
+            await batch.commit();
+        } catch (error) {
+            console.error('Failed to update items order:', error);
+            throw error;
+        }
+    };
+
     return {
         items,
         archivedItems,
@@ -718,6 +825,7 @@ export function useFirestore(user) {
         updateUserRole,
         standards,
         addStandard,
-        deleteStandard
+        deleteStandard,
+        updateItemsOrder
     };
 }

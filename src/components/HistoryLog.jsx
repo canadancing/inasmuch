@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import SearchableSection from './SearchableSection';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, residents, items }) {
     const [editForm, setEditForm] = useState({
@@ -53,7 +54,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
 
     const handleEdit = (log) => {
         const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
-        const dateStr = logDate.toISOString().split('T')[0];
+        const dateStr = getLocalISODate(logDate);
         setEditForm({
             id: log.id,
             quantity: log.quantity || 1,
@@ -236,7 +237,7 @@ export default function HistoryLog({ logs, loading, onDeleteLog, onUpdateLog, re
                                 className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2 text-sm border-none focus:ring-2 focus:ring-primary-500 outline-none h-10"
                                 value={editForm.date}
                                 onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                                max={new Date().toISOString().split('T')[0]}
+                                max={getLocalISODate()}
                             />
                         </div>
                     </div>

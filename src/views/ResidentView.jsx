@@ -1,10 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import ItemGrid from '../components/ItemGrid';
 import RestockModal from '../components/RestockModal';
 import ConsumptionModal from '../components/ConsumptionModal';
 import ItemRecordsModal from '../components/ItemRecordsModal';
 import AddItemModal from '../components/AddItemModal';
 import EntityStatsModal from '../components/EntityStatsModal';
+import ItemActionModal from '../components/ItemActionModal';
 import { useFirestore } from '../hooks/useFirestore';
 import { useInventory } from '../context/InventoryContext';
 
@@ -48,18 +63,35 @@ export default function ResidentView({
     const [showAddItemModal, setShowAddItemModal] = useState(false);
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [selectedStatsItem, setSelectedStatsItem] = useState(null);
+    const [showActionModal, setShowActionModal] = useState(false);
+    const [selectedActionItem, setSelectedActionItem] = useState(null);
 
     const sortDropdownRef = useRef(null);
-    const { updateItem } = useFirestore();
+    const { updateItem, updateItemsOrder } = useFirestore(user);
     const { currentInventoryId } = useInventory();
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const handleHideItem = async (itemId) => {
         await updateItem(itemId, { hidden: true });
     };
 
+    const handlePinItem = async (item) => {
+        await updateItem(item.id, { isPinned: !item.isPinned });
+    };
+
     const handleItemClick = (item) => {
-        setSelectedRecordsItem(item);
-        setShowRecordsModal(true);
+        setSelectedActionItem(item);
+        setShowActionModal(true);
     };
 
     const handleConsumptionClick = (item) => {
@@ -70,6 +102,16 @@ export default function ResidentView({
     const handleShowRecords = (item) => {
         setSelectedRecordsItem(item);
         setShowRecordsModal(true);
+    };
+
+    const handleRestockClick = (item) => {
+        setSelectedRestockItem(item);
+        setShowRestockModal(true);
+    };
+
+    const handleShowStats = (item) => {
+        setSelectedStatsItem(item);
+        setShowStatsModal(true);
     };
 
 
@@ -146,7 +188,12 @@ export default function ResidentView({
 
     // Sort items
     const sortedItems = [...filteredItems].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+
         switch (sortBy) {
+            case 'custom':
+                return (a.customOrder || 0) - (b.customOrder || 0);
             case 'alphabetical':
                 return a.name.localeCompare(b.name);
             case 'stock-asc':
@@ -158,6 +205,25 @@ export default function ResidentView({
         }
     });
 
+    const isCustomSort = sortBy === 'custom';
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+
+        if (active && over && active.id !== over.id) {
+            const oldIndex = sortedItems.findIndex((i) => i.id === active.id);
+            const newIndex = sortedItems.findIndex((i) => i.id === over.id);
+
+            const newOrder = arrayMove(sortedItems, oldIndex, newIndex);
+            
+            const reorderedItemIds = newOrder.map(i => i.id);
+            if (updateItemsOrder) {
+                updateItemsOrder(reorderedItemIds).catch(err => {
+                    console.error('Failed to save new custom order:', err);
+                });
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -265,6 +331,16 @@ export default function ResidentView({
                         </button>
                         {showSortDropdown && (
                             <div className="absolute z-20 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                                <button
+                                    onClick={() => {
+                                        setSortBy('custom');
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between ${sortBy === 'custom' ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}
+                                >
+                                    <span>Custom Order</span>
+                                    {sortBy === 'custom' && <span>✓</span>}
+                                </button>
                                 <button
                                     onClick={() => {
                                         setSortBy('alphabetical');
@@ -428,24 +504,25 @@ export default function ResidentView({
                         )}
                     </div>
                 ) : (
-                    <ItemGrid
-                        items={sortedItems}
-                        displayMode={displayMode}
-                        onSelectItem={handleItemClick}
-                        showStockOnly={true}
-                        onHideItem={handleHideItem}
-                        onConsume={handleConsumptionClick}
-                        onShowRecords={handleShowRecords}
-                        onRestock={(item) => {
-                            setSelectedRestockItem(item);
-                            setShowRestockModal(true);
-                        }}
-                        onShowStats={(item) => {
-                            setSelectedStatsItem(item);
-                            setShowStatsModal(true);
-                        }}
-                        onAddItem={onAddItem ? () => setShowAddItemModal(true) : null}
-                    />
+                    <DndContext 
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext 
+                            items={sortedItems.map(i => i.id)}
+                            strategy={rectSortingStrategy}
+                        >
+                            <ItemGrid
+                                items={sortedItems}
+                                displayMode={displayMode}
+                                onSelectItem={handleItemClick}
+                                showStockOnly={true}
+                                onAddItem={onAddItem ? () => setShowAddItemModal(true) : null}
+                                isSortable={isCustomSort}
+                            />
+                        </SortableContext>
+                    </DndContext>
                 )}
             </div>
 
@@ -491,7 +568,7 @@ export default function ResidentView({
                     setShowRecordsModal(false);
                     setSelectedRecordsItem(null);
                 }}
-                item={selectedRecordsItem}
+                item={selectedRecordsItem ? items.find(i => i.id === selectedRecordsItem.id) || selectedRecordsItem : null}
                 currentInventoryId={currentInventoryId}
                 onUpdateItem={onUpdateItem}
                 onDeleteItem={onDeleteItem}
@@ -514,10 +591,23 @@ export default function ResidentView({
             <EntityStatsModal
                 isOpen={showStatsModal}
                 onClose={() => { setShowStatsModal(false); setSelectedStatsItem(null); }}
-                entity={selectedStatsItem}
+                entity={selectedStatsItem ? items.find(i => i.id === selectedStatsItem.id) || selectedStatsItem : null}
                 entityType="item"
                 logs={logs || []}
                 residents={residents}
+            />
+
+            {/* Item Action Modal */}
+            <ItemActionModal
+                item={selectedActionItem ? items.find(i => i.id === selectedActionItem.id) || selectedActionItem : null}
+                isOpen={showActionModal}
+                onClose={() => { setShowActionModal(false); setSelectedActionItem(null); }}
+                onRestock={handleRestockClick}
+                onConsume={handleConsumptionClick}
+                onPinItem={handlePinItem}
+                onShowRecords={handleShowRecords}
+                onShowStats={handleShowStats}
+                onHideItem={handleHideItem}
             />
         </div>
     );

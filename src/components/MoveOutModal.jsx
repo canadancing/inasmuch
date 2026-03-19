@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export default function MoveOutModal({ isOpen, onClose, entity, onMoveOut }) {
     const [moveOutDate, setMoveOutDate] = useState(
-        new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
+        getLocalISODate() // Today's date in YYYY-MM-DD format
     );
     const [notes, setNotes] = useState('');
 
@@ -18,7 +19,7 @@ export default function MoveOutModal({ isOpen, onClose, entity, onMoveOut }) {
     };
 
     const handleClose = () => {
-        setMoveOutDate(new Date().toISOString().split('T')[0]);
+        setMoveOutDate(getLocalISODate());
         setNotes('');
         onClose();
     };
@@ -66,7 +67,7 @@ export default function MoveOutModal({ isOpen, onClose, entity, onMoveOut }) {
                             type="date"
                             value={moveOutDate}
                             onChange={(e) => setMoveOutDate(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]} // Can't be in the future
+                            max={getLocalISODate()} // Can't be in the future
                             className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                         />
                     </div>

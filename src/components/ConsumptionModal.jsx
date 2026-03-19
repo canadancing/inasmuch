@@ -1,6 +1,7 @@
 // Modal for logging consumption/usage quickly
 import { useState, useEffect, useRef } from 'react';
 import AddPersonModal from './AddPersonModal';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export default function ConsumptionModal({ isOpen, onClose, items, initialItems, onLog, user, setCurrentView, residents, onAddResident, tags = [], initialPerson = null }) {
     const [selectedPerson, setSelectedPerson] = useState(initialPerson);
@@ -9,7 +10,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
     const [personSearch, setPersonSearch] = useState('');
     const [showItemDropdown, setShowItemDropdown] = useState(false);
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
-    const [consumptionDate, setConsumptionDate] = useState(new Date().toISOString().split('T')[0]);
+    const [consumptionDate, setConsumptionDate] = useState(getLocalISODate());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
@@ -221,7 +222,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
         try {
             const [year, month, day] = consumptionDate.split('-').map(Number);
             const dateObj = new Date(year, month - 1, day);
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalISODate();
             if (consumptionDate === todayStr) {
                 const now = new Date();
                 dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
@@ -241,7 +242,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
             setSelectedItems([]);
             setItemSearch('');
             setPersonSearch('');
-            setConsumptionDate(new Date().toISOString().split('T')[0]);
+            setConsumptionDate(getLocalISODate());
             onClose();
         } catch (error) {
             console.error('Error logging consumption:', error);
@@ -601,7 +602,7 @@ export default function ConsumptionModal({ isOpen, onClose, items, initialItems,
                             type="date"
                             value={consumptionDate}
                             onChange={(e) => setConsumptionDate(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
+                            max={getLocalISODate()}
                             className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-red-500 focus:ring-0 transition-colors"
                         />
                     </div>

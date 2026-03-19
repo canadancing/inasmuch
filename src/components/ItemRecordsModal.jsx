@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { ITEM_ICON_CATEGORIES, DEFAULT_ICON, suggestIcons } from '../constants/itemIcons';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export default function ItemRecordsModal({ isOpen, onClose, item, currentInventoryId, onUpdateItem, onDeleteItem, onUpdateLog, onDeleteLog, tags = [], residents = [] }) {
     const [records, setRecords] = useState([]);
@@ -57,9 +58,10 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             }));
 
             // Sort by timestamp descending (newest first) on client-side
-            history.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+            const filteredHistory = history.filter(log => !log.deleted);
+            filteredHistory.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
 
-            setRecords(history);
+            setRecords(filteredHistory);
         } catch (error) {
             console.error('Error fetching records:', error);
             setRecords([]);
@@ -216,16 +218,30 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
             alert('Quantity must be at least 1');
             return;
         }
-        await onUpdateLog(editingLogId, editingLogData);
-        setEditingLogId(null);
-        setEditingLogData(null);
-        await fetchRecords(); // Refresh records
+
+        try {
+            await onUpdateLog(editingLogId, editingLogData);
+            setEditingLogId(null);
+            setEditingLogData(null);
+            await fetchRecords(); // Refresh records
+        } catch (error) {
+            console.error('Error updating log:', error);
+            alert(`Failed to save changes: ${error.message}`);
+        }
     };
 
     const handleDeleteLog = async () => {
-        await onDeleteLog(deleteLogId);
-        setDeleteLogId(null);
-        await fetchRecords(); // Refresh records  
+        try {
+            await onDeleteLog(deleteLogId);
+            setDeleteLogId(null);
+            setShowDeleteConfirm(false);
+            await fetchRecords(); // Refresh records  
+        } catch (error) {
+            console.error('Error deleting log:', error);
+            alert(`Failed to delete log: ${error.message}`);
+            setShowDeleteConfirm(false);
+            setDeleteLogId(null);
+        }
     };
 
     // Calculate statistics from records
@@ -1041,10 +1057,21 @@ export default function ItemRecordsModal({ isOpen, onClose, item, currentInvento
                                 <input
                                     type="date"
                                     value={editingLogData.date instanceof Date
-                                        ? editingLogData.date.toISOString().split('T')[0]
-                                        : editingLogData.date?.toDate?.().toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+                                        ? getLocalISODate(editingLogData.date)
+                                        : editingLogData.date?.toDate?.() ? getLocalISODate(editingLogData.date.toDate()) : getLocalISODate()
                                     }
-                                    onChange={(e) => setEditingLogData({ ...editingLogData, date: new Date(e.target.value) })}
+                                    onChange={(e) => {
+                                        const [year, month, day] = e.target.value.split('-').map(Number);
+                                        const newDate = new Date(year, month - 1, day);
+                                        // Preserve original time if available
+                                        const origDate = editingLogData.date instanceof Date ? editingLogData.date : editingLogData.date?.toDate?.();
+                                        if (origDate) {
+                                            newDate.setHours(origDate.getHours(), origDate.getMinutes(), origDate.getSeconds());
+                                        } else {
+                                            newDate.setHours(12, 0, 0, 0);
+                                        }
+                                        setEditingLogData({ ...editingLogData, date: newDate });
+                                    }}
                                     className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                                 />
                             </div>

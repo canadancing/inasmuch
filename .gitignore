@@ -49,3 +49,6 @@ Desktop.ini
 # Firebase sensitive files - DO NOT COMMIT
 serviceAccountKey.json
 *serviceAccount*.json
+
+# Sensitive Agent Skills
+.agent/skills/testing-inasmuch/SKILL.md
